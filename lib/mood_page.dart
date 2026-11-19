@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 
 // ======================================================
@@ -10,6 +11,266 @@ const Color kPinkLight = Color(0xFFFFEAF1);
 const Color kBackground = Color(0xFFFFF9FB);
 const Color kTextDark = Color(0xFF493A42);
 const Color kTextSoft = Color(0xFF8B7B83);
+const Color kBorder = Color(0xFFEDE3E7);
+
+// ======================================================
+// MODEL DATA MOOD
+// ======================================================
+
+class MoodRecord {
+  final DateTime date;
+  final String mood;
+  final String note;
+
+  const MoodRecord({
+    required this.date,
+    required this.mood,
+    required this.note,
+  });
+}
+
+// ======================================================
+// PENYIMPANAN SEMENTARA MOOD
+// ======================================================
+
+class MoodJournal extends ChangeNotifier {
+  final List<MoodRecord> _records = [];
+
+  List<MoodRecord> get records {
+    final result = List<MoodRecord>.from(_records);
+
+    result.sort(
+      (a, b) => b.date.compareTo(a.date),
+    );
+
+    return result;
+  }
+
+  bool sameDate(DateTime a, DateTime b) {
+    return a.year == b.year &&
+        a.month == b.month &&
+        a.day == b.day;
+  }
+
+  MoodRecord? findByDate(DateTime date) {
+    for (final record in _records) {
+      if (sameDate(record.date, date)) {
+        return record;
+      }
+    }
+
+    return null;
+  }
+
+  // Satu tanggal memiliki satu catatan mood.
+  // Jika disimpan lagi, catatan sebelumnya diperbarui.
+
+  void save(MoodRecord record) {
+    _records.removeWhere(
+      (item) => sameDate(item.date, record.date),
+    );
+
+    _records.add(record);
+    notifyListeners();
+  }
+
+  void delete(DateTime date) {
+    _records.removeWhere(
+      (item) => sameDate(item.date, date),
+    );
+
+    notifyListeners();
+  }
+}
+
+// Digunakan juga oleh statistics_page.dart.
+final MoodJournal moodJournal = MoodJournal();
+
+// ======================================================
+// PILIHAN MOOD
+// ======================================================
+
+class MoodOption {
+  final String name;
+  final String emoji;
+
+  const MoodOption(this.name, this.emoji);
+}
+
+const List<MoodOption> moodOptions = [
+  MoodOption('Senang', '😊'),
+  MoodOption('Tenang', '😌'),
+  MoodOption('Biasa', '😐'),
+  MoodOption('Sedih', '😢'),
+  MoodOption('Lelah', '😴'),
+  MoodOption('Cemas', '😟'),
+  MoodOption('Mudah Marah', '😠'),
+];
+
+// ======================================================
+// MODEL REKOMENDASI
+// ======================================================
+
+class MoodRecommendation {
+  final String message;
+  final List<String> foods;
+  final List<String> activities;
+
+  const MoodRecommendation({
+    required this.message,
+    required this.foods,
+    required this.activities,
+  });
+}
+
+// ======================================================
+// DATA REKOMENDASI BERDASARKAN MOOD
+// ======================================================
+
+const Map<String, MoodRecommendation> moodRecommendations = {
+  'Senang': MoodRecommendation(
+    message:
+        'Senang mendengar suasana hatimu sedang baik! '
+        'Pertahankan kebiasaan yang membuatmu nyaman.',
+    foods: [
+      'Makanan seimbang dengan sayur dan protein.',
+      'Buah segar seperti pisang, apel, atau jeruk.',
+      'Minum air yang cukup sepanjang hari.',
+    ],
+    activities: [
+      'Luangkan waktu untuk hobi yang kamu sukai.',
+      'Jalan santai atau olahraga ringan.',
+      'Tuliskan hal menyenangkan yang terjadi hari ini.',
+    ],
+  ),
+
+  'Tenang': MoodRecommendation(
+    message:
+        'Suasana hati yang tenang bisa menjadi '
+        'kesempatan untuk merawat diri.',
+    foods: [
+      'Oatmeal atau roti gandum dengan buah.',
+      'Makanan utama yang mengandung protein dan sayur.',
+      'Air putih sesuai kebutuhan tubuh.',
+    ],
+    activities: [
+      'Membaca buku atau mendengarkan musik.',
+      'Melakukan peregangan ringan.',
+      'Mempertahankan rutinitas tidur yang teratur.',
+    ],
+  ),
+
+  'Biasa': MoodRecommendation(
+    message:
+        'Tidak masalah jika hari ini terasa biasa saja. '
+        'Tetap perhatikan kebutuhan tubuhmu, ya.',
+    foods: [
+      'Nasi, sayur, dan lauk berprotein.',
+      'Buah atau kacang sebagai camilan.',
+      'Minum air putih yang cukup.',
+    ],
+    activities: [
+      'Berjalan santai selama 10–15 menit.',
+      'Melakukan aktivitas sesuai kemampuan.',
+      'Memberikan waktu untuk beristirahat.',
+    ],
+  ),
+
+  'Sedih': MoodRecommendation(
+    message:
+        'Kalau hari ini terasa berat, berikan waktu '
+        'untuk dirimu sendiri. Kamu boleh beristirahat '
+        'dan mencari dukungan.',
+    foods: [
+      'Usahakan tetap makan secara teratur.',
+      'Pilih makanan seimbang seperti nasi, telur, '
+          'sayur, dan buah.',
+      'Penuhi kebutuhan cairan tubuh.',
+    ],
+    activities: [
+      'Ceritakan perasaanmu kepada orang tepercaya.',
+      'Coba jalan santai jika kamu merasa nyaman.',
+      'Dengarkan musik atau lakukan hobi yang menenangkan.',
+    ],
+  ),
+
+  'Lelah': MoodRecommendation(
+    message:
+        'Tubuhmu mungkin membutuhkan istirahat. '
+        'Tidak perlu memaksakan diri menyelesaikan '
+        'semuanya sekaligus.',
+    foods: [
+      'Makanan utama seperti nasi, ikan atau telur, '
+          'dan sayuran.',
+      'Buah sebagai camilan praktis.',
+      'Air putih untuk memenuhi kebutuhan cairan.',
+    ],
+    activities: [
+      'Beristirahat dari aktivitas berat.',
+      'Melakukan peregangan ringan bila nyaman.',
+      'Mengusahakan tidur yang cukup dan teratur.',
+    ],
+  ),
+
+  'Cemas': MoodRecommendation(
+    message:
+        'Ketika merasa cemas, coba fokus pada '
+        'satu hal kecil yang bisa dilakukan sekarang.',
+    foods: [
+      'Usahakan makan teratur, misalnya oatmeal '
+          'dengan buah.',
+      'Camilan seperti yogurt atau kacang jika cocok.',
+      'Perhatikan apakah kafein memperburuk kecemasan.',
+    ],
+    activities: [
+      'Melakukan latihan pernapasan perlahan.',
+      'Menuliskan hal yang membuatmu khawatir.',
+      'Berjalan santai atau berbicara dengan '
+          'orang yang dipercaya.',
+    ],
+  ),
+
+  'Mudah Marah': MoodRecommendation(
+    message:
+        'Kalau emosi terasa lebih sensitif, '
+        'ambil jeda sebelum melanjutkan aktivitas.',
+    foods: [
+      'Makan secara teratur.',
+      'Buah, roti gandum, atau kacang sebagai camilan.',
+      'Minum air yang cukup.',
+    ],
+    activities: [
+      'Mengambil jeda dari situasi yang membuat kesal.',
+      'Melakukan pernapasan perlahan.',
+      'Berjalan santai atau mendengarkan musik.',
+    ],
+  ),
+};
+
+// ======================================================
+// FORMAT TANGGAL
+// ======================================================
+
+String formatMoodDate(DateTime date) {
+  const months = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+
+  return '${date.day} '
+      '${months[date.month - 1]} '
+      '${date.year}';
+}
 
 // ======================================================
 // MOOD PAGE
@@ -24,51 +285,25 @@ class MoodPage extends StatefulWidget {
 
 class _MoodPageState extends State<MoodPage> {
   String? selectedMood;
-  String? selectedLevel;
-
-  final List<String> selectedSymptoms = [];
 
   final TextEditingController noteController =
       TextEditingController();
 
   bool hasSaved = false;
 
-  // ======================================================
-  // DATA PILIHAN
-  // ======================================================
+  // ====================================================
+  // TANGGAL OTOMATIS DARI HP
+  // ====================================================
 
-  final List<String> moods = [
-    'Senang',
-    'Tenang',
-    'Biasa',
-    'Sedih',
-    'Lelah',
-  ];
+  DateTime get today {
+    return DateUtils.dateOnly(DateTime.now());
+  }
 
-  final List<IconData> moodIcons = [
-    Icons.sentiment_very_satisfied_outlined,
-    Icons.sentiment_satisfied_outlined,
-    Icons.sentiment_neutral_outlined,
-    Icons.sentiment_dissatisfied_outlined,
-    Icons.battery_2_bar_outlined,
-  ];
-
-  final List<String> symptoms = [
-    'Kram',
-    'Sakit Kepala',
-    'Kembung',
-    'Mual',
-    'Jerawat',
-    'Nyeri Payudara',
-    'Pegal',
-    'Sulit Tidur',
-  ];
-
-  final List<String> complaintLevels = [
-    'Ringan',
-    'Sedang',
-    'Berat',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    loadSavedMood();
+  }
 
   @override
   void dispose() {
@@ -76,67 +311,313 @@ class _MoodPageState extends State<MoodPage> {
     super.dispose();
   }
 
-  // ======================================================
-  // PILIH / HAPUS GEJALA
-  // ======================================================
+  // ====================================================
+  // MEMUAT MOOD HARI INI
+  // ====================================================
 
-  void toggleSymptom(String symptom) {
-    setState(() {
-      if (selectedSymptoms.contains(symptom)) {
-        selectedSymptoms.remove(symptom);
-      } else {
-        selectedSymptoms.add(symptom);
-      }
-    });
+  void loadSavedMood() {
+    final existing = moodJournal.findByDate(today);
+
+    selectedMood = existing?.mood;
+    noteController.text = existing?.note ?? '';
+    hasSaved = existing != null;
   }
 
-  // ======================================================
-  // SIMPAN
-  // ======================================================
+  // ====================================================
+  // SIMPAN MOOD DENGAN TANGGAL OTOMATIS
+  // ====================================================
 
-  void saveLog() {
+  void saveMood() {
     if (selectedMood == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Pilih mood terlebih dahulu.',
+            'Pilih suasana hati terlebih dahulu.',
           ),
         ),
       );
-
       return;
     }
+
+    FocusScope.of(context).unfocus();
+
+    // Tanggal diambil saat tombol Simpan ditekan.
+    final currentDate = DateUtils.dateOnly(
+      DateTime.now(),
+    );
+
+    moodJournal.save(
+      MoodRecord(
+        date: currentDate,
+        mood: selectedMood!,
+        note: noteController.text.trim(),
+      ),
+    );
 
     setState(() {
       hasSaved = true;
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
-          'Catatan berhasil disimpan.',
+          'Mood berhasil dicatat pada '
+          '${formatMoodDate(currentDate)}.',
         ),
       ),
     );
   }
 
-  // ======================================================
-  // RESET
-  // ======================================================
+  // ====================================================
+  // BATALKAN PERUBAHAN
+  // ====================================================
 
-  void resetLog() {
+  void resetForm() {
     setState(() {
-      selectedMood = null;
-      selectedLevel = null;
-      selectedSymptoms.clear();
-      noteController.clear();
-      hasSaved = false;
+      loadSavedMood();
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Form dikembalikan ke catatan terakhir.',
+        ),
+      ),
+    );
   }
 
-  // ======================================================
-  // BUILD
-  // ======================================================
+  // ====================================================
+  // CARD UMUM
+  // ====================================================
+
+  Widget sectionCard({
+    required String title,
+    required Widget child,
+    String? subtitle,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: kTextDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+
+          if (subtitle != null) ...[
+            const SizedBox(height: 5),
+
+            Text(
+              subtitle,
+              style: const TextStyle(
+                color: kTextSoft,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 15),
+
+          child,
+        ],
+      ),
+    );
+  }
+
+  // ====================================================
+  // ITEM REKOMENDASI
+  // ====================================================
+
+  Widget adviceItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.check_circle_outline,
+            color: kPinkDark,
+            size: 18,
+          ),
+
+          const SizedBox(width: 9),
+
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: kTextDark,
+                fontSize: 12,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ====================================================
+  // SARAN OTOMATIS BERDASARKAN MOOD
+  // ====================================================
+
+  Widget recommendationSection() {
+    if (selectedMood == null) {
+      return const SizedBox.shrink();
+    }
+
+    final recommendation =
+        moodRecommendations[selectedMood]!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Saran untuk Hari Ini',
+          style: TextStyle(
+            color: kTextDark,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 7),
+
+        const Text(
+          'Saran sederhana berdasarkan '
+          'suasana hati yang kamu pilih.',
+          style: TextStyle(
+            color: kTextSoft,
+            fontSize: 12,
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        // ==========================================
+        // PESAN MOOD
+        // ==========================================
+
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: kPinkLight,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.favorite_border,
+                color: kPinkDark,
+                size: 23,
+              ),
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Mood: $selectedMood',
+                      style: const TextStyle(
+                        color: kPinkDark,
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    Text(
+                      recommendation.message,
+                      style: const TextStyle(
+                        color: kTextDark,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 13),
+
+        // ==========================================
+        // SARAN MAKANAN
+        // ==========================================
+
+        sectionCard(
+          title: 'Saran Makanan',
+          subtitle:
+              'Pilihan makanan untuk mendukung '
+              'pola makan seimbang.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: recommendation.foods
+                .map(adviceItem)
+                .toList(),
+          ),
+        ),
+
+        const SizedBox(height: 13),
+
+        // ==========================================
+        // SARAN AKTIVITAS
+        // ==========================================
+
+        sectionCard(
+          title: 'Saran Aktivitas',
+          subtitle:
+              'Pilih kegiatan yang terasa nyaman '
+              'untuk dilakukan.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: recommendation.activities
+                .map(adviceItem)
+                .toList(),
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        const Text(
+          'Saran ini bersifat edukasi umum, bukan '
+          'diagnosis atau pengobatan. Jika perubahan '
+          'mood sangat berat, berlangsung lama, '
+          'atau mengganggu aktivitas, konsultasikan '
+          'dengan tenaga kesehatan.',
+          style: TextStyle(
+            color: kTextSoft,
+            fontSize: 11,
+            height: 1.5,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ====================================================
+  // BUILD HALAMAN
+  // ====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -147,19 +628,8 @@ class _MoodPageState extends State<MoodPage> {
         backgroundColor: kBackground,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: kTextDark,
-          ),
-        ),
-
         title: const Text(
-          'Mood & Gejala',
+          'Catat Mood',
           style: TextStyle(
             color: kTextDark,
             fontSize: 20,
@@ -171,58 +641,22 @@ class _MoodPageState extends State<MoodPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           20,
-          10,
+          14,
           20,
           35,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ==================================================
-            // INFO
-            // ==================================================
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: kPinkLight,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.edit_note_outlined,
-                    color: kPinkDark,
-                    size: 28,
-                  ),
-
-                  SizedBox(width: 12),
-
-                  Expanded(
-                    child: Text(
-                      'Catat kondisi yang kamu rasakan hari ini.',
-                      style: TextStyle(
-                        color: kTextDark,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 25),
-
-            // ==================================================
-            // MOOD
-            // ==================================================
+            // ==========================================
+            // HEADER
+            // ==========================================
 
             const Text(
-              'Bagaimana mood kamu hari ini?',
+              'Bagaimana perasaanmu hari ini?',
               style: TextStyle(
                 color: kTextDark,
-                fontSize: 17,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -230,90 +664,92 @@ class _MoodPageState extends State<MoodPage> {
             const SizedBox(height: 6),
 
             const Text(
-              'Pilih satu mood yang paling sesuai.',
+              'Pilih mood untuk mendapatkan '
+              'saran makanan dan aktivitas '
+              'yang sesuai.',
               style: TextStyle(
                 color: kTextSoft,
                 fontSize: 12,
+                height: 1.5,
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 23),
 
-            SizedBox(
-              height: 95,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: moods.length,
-                separatorBuilder: (
-                  context,
-                  index,
-                ) =>
-                    const SizedBox(width: 10),
-                itemBuilder: (
-                  context,
-                  index,
-                ) {
-                  final mood = moods[index];
+            // ==========================================
+            // PILIH MOOD
+            // ==========================================
+
+            sectionCard(
+              title: 'Pilih Mood',
+              subtitle:
+                  'Pilih satu suasana hati '
+                  'yang paling sesuai.',
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics:
+                    const NeverScrollableScrollPhysics(),
+                itemCount: moodOptions.length,
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 1.2,
+                ),
+                itemBuilder: (context, index) {
+                  final mood = moodOptions[index];
 
                   final selected =
-                      selectedMood == mood;
+                      selectedMood == mood.name;
 
                   return InkWell(
-                    borderRadius:
-                        BorderRadius.circular(14),
                     onTap: () {
                       setState(() {
-                        selectedMood = mood;
+                        selectedMood = mood.name;
                         hasSaved = false;
                       });
                     },
+                    borderRadius:
+                        BorderRadius.circular(12),
                     child: Container(
-                      width: 78,
-                      padding:
-                          const EdgeInsets.symmetric(
-                        vertical: 12,
-                      ),
                       decoration: BoxDecoration(
                         color: selected
                             ? kPinkLight
                             : Colors.white,
                         borderRadius:
-                            BorderRadius.circular(14),
+                            BorderRadius.circular(12),
                         border: Border.all(
                           color: selected
                               ? kPink
-                              : const Color(
-                                  0xFFEFE4E8,
-                                ),
+                              : kBorder,
+                          width: selected ? 1.5 : 1,
                         ),
                       ),
                       child: Column(
                         mainAxisAlignment:
                             MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            moodIcons[index],
-                            color: selected
-                                ? kPinkDark
-                                : kTextSoft,
-                            size: 28,
+                          Text(
+                            mood.emoji,
+                            style: const TextStyle(
+                              fontSize: 27,
+                            ),
                           ),
 
-                          const SizedBox(height: 7),
+                          const SizedBox(height: 6),
 
                           Text(
-                            mood,
+                            mood.name,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: selected
                                   ? kPinkDark
                                   : kTextDark,
                               fontSize: 11,
-                              fontWeight:
-                                  selected
-                                      ? FontWeight
-                                          .bold
-                                      : FontWeight
-                                          .normal,
+                              fontWeight: selected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -324,410 +760,145 @@ class _MoodPageState extends State<MoodPage> {
               ),
             ),
 
-            const SizedBox(height: 30),
-
-            // ==================================================
-            // GEJALA
-            // ==================================================
-
-            const Text(
-              'Gejala yang dirasakan',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            const Text(
-              'Kamu bisa memilih lebih dari satu.',
-              style: TextStyle(
-                color: kTextSoft,
-                fontSize: 12,
-              ),
-            ),
-
             const SizedBox(height: 15),
 
-            Wrap(
-              spacing: 9,
-              runSpacing: 9,
-              children: symptoms.map(
-                (symptom) {
-                  final selected =
-                      selectedSymptoms.contains(
-                    symptom,
-                  );
+            // ==========================================
+            // CATATAN TAMBAHAN
+            // ==========================================
 
-                  return FilterChip(
-                    label: Text(symptom),
-                    selected: selected,
-
-                    onSelected: (_) {
-                      toggleSymptom(symptom);
-
-                      setState(() {
-                        hasSaved = false;
-                      });
-                    },
-
-                    selectedColor: kPinkLight,
-                    backgroundColor: Colors.white,
-
-                    side: BorderSide(
-                      color: selected
-                          ? kPink
-                          : const Color(
-                              0xFFEFE4E8,
-                            ),
-                    ),
-
-                    checkmarkColor: kPinkDark,
-
-                    labelStyle: TextStyle(
-                      color: selected
-                          ? kPinkDark
-                          : kTextDark,
-                      fontSize: 12,
-                    ),
-                  );
+            sectionCard(
+              title: 'Catatan Tambahan',
+              subtitle:
+                  'Opsional, ceritakan apa '
+                  'yang kamu rasakan hari ini.',
+              child: TextField(
+                controller: noteController,
+                maxLines: 3,
+                onChanged: (_) {
+                  if (hasSaved) {
+                    setState(() {
+                      hasSaved = false;
+                    });
+                  }
                 },
-              ).toList(),
-            ),
-
-            const SizedBox(height: 30),
-
-            // ==================================================
-            // TINGKAT KELUHAN
-            // ==================================================
-
-            const Text(
-              'Tingkat keluhan',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            const Text(
-              'Pilih berdasarkan kondisi yang kamu rasakan.',
-              style: TextStyle(
-                color: kTextSoft,
-                fontSize: 12,
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            Row(
-              children: complaintLevels.map(
-                (level) {
-                  final selected =
-                      selectedLevel == level;
-
-                  return Expanded(
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.only(
-                        right: 8,
-                      ),
-                      child: InkWell(
-                        borderRadius:
-                            BorderRadius.circular(12),
-                        onTap: () {
-                          setState(() {
-                            selectedLevel = level;
-                            hasSaved = false;
-                          });
-                        },
-                        child: Container(
-                          padding:
-                              const EdgeInsets.symmetric(
-                            vertical: 13,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? kPinkLight
-                                : Colors.white,
-                            borderRadius:
-                                BorderRadius.circular(
-                              12,
-                            ),
-                            border: Border.all(
-                              color: selected
-                                  ? kPink
-                                  : const Color(
-                                      0xFFEFE4E8,
-                                    ),
-                            ),
-                          ),
-                          child: Text(
-                            level,
-                            textAlign:
-                                TextAlign.center,
-                            style: TextStyle(
-                              color: selected
-                                  ? kPinkDark
-                                  : kTextDark,
-                              fontSize: 12,
-                              fontWeight:
-                                  selected
-                                      ? FontWeight
-                                          .bold
-                                      : FontWeight
-                                          .normal,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ).toList(),
-            ),
-
-            const SizedBox(height: 30),
-
-            // ==================================================
-            // CATATAN
-            // ==================================================
-
-            const Text(
-              'Catatan tambahan',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 6),
-
-            const Text(
-              'Bagian ini boleh dikosongkan.',
-              style: TextStyle(
-                color: kTextSoft,
-                fontSize: 12,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            TextField(
-              controller: noteController,
-              maxLines: 4,
-              onChanged: (_) {
-                setState(() {
-                  hasSaved = false;
-                });
-              },
-              decoration: InputDecoration(
-                hintText:
-                    'Contoh: Hari ini merasa sedikit kram dan lelah...',
-                hintStyle: const TextStyle(
-                  color: kTextSoft,
-                  fontSize: 12,
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(
-                      0xFFEFE4E8,
-                    ),
+                decoration: InputDecoration(
+                  hintText:
+                      'Contoh: Hari ini merasa lelah '
+                      'setelah banyak aktivitas...',
+                  hintStyle: const TextStyle(
+                    color: kTextSoft,
+                    fontSize: 12,
                   ),
-                ),
-                enabledBorder:
-                    OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(14),
-                  borderSide: const BorderSide(
-                    color: Color(
-                      0xFFEFE4E8,
-                    ),
+                  filled: true,
+                  fillColor: kBackground,
+                  border: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(10),
+                    borderSide:
+                        const BorderSide(color: kBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius:
+                        BorderRadius.circular(10),
+                    borderSide:
+                        const BorderSide(color: kBorder),
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 25),
+            const SizedBox(height: 20),
 
-            // ==================================================
-            // SIMPAN
-            // ==================================================
+            // ==========================================
+            // TOMBOL SIMPAN
+            // ==========================================
 
             SizedBox(
               width: double.infinity,
-              height: 52,
+              height: 50,
               child: FilledButton.icon(
-                onPressed: saveLog,
-                style:
-                    FilledButton.styleFrom(
-                  backgroundColor: kPink,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(
-                      14,
-                    ),
-                  ),
-                ),
+                onPressed: saveMood,
                 icon: const Icon(
                   Icons.save_outlined,
                 ),
                 label: const Text(
-                  'Simpan Catatan',
-                  style: TextStyle(
-                    fontWeight:
-                        FontWeight.bold,
+                  'Simpan Mood',
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: kPink,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(11),
                   ),
                 ),
               ),
             ),
 
-            // ==================================================
-            // HASIL
-            // ==================================================
+            const SizedBox(height: 6),
+
+            Center(
+              child: TextButton(
+                onPressed: resetForm,
+                child: const Text(
+                  'Batalkan Perubahan',
+                  style: TextStyle(
+                    color: kPinkDark,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ),
+
+            // ==========================================
+            // KONFIRMASI SIMPAN
+            // ==========================================
 
             if (hasSaved) ...[
-              const SizedBox(height: 30),
+              const SizedBox(height: 10),
 
-              const Divider(),
-
-              const SizedBox(height: 20),
-
-              Row(
-                children: [
-                  const Text(
-                    'Catatan Hari Ini',
-                    style: TextStyle(
-                      color: kTextDark,
-                      fontSize: 18,
-                      fontWeight:
-                          FontWeight.bold,
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: kBorder),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.check_circle_outline,
+                      color: kPinkDark,
                     ),
-                  ),
 
-                  const Spacer(),
+                    const SizedBox(width: 10),
 
-                  TextButton(
-                    onPressed: resetLog,
-                    child: const Text(
-                      'Reset',
-                      style: TextStyle(
-                        color: kPinkDark,
+                    Expanded(
+                      child: Text(
+                        'Mood $selectedMood berhasil '
+                        'dicatat pada '
+                        '${formatMoodDate(today)}.',
+                        style: const TextStyle(
+                          color: kTextDark,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              SavedDataRow(
-                title: 'Mood',
-                value: selectedMood ?? '-',
-              ),
-
-              const SizedBox(height: 12),
-
-              SavedDataRow(
-                title: 'Gejala',
-                value:
-                    selectedSymptoms.isEmpty
-                        ? 'Tidak ada'
-                        : selectedSymptoms.join(
-                            ', ',
-                          ),
-              ),
-
-              const SizedBox(height: 12),
-
-              SavedDataRow(
-                title: 'Keluhan',
-                value:
-                    selectedLevel ??
-                        'Belum dipilih',
-              ),
-
-              if (noteController
-                  .text
-                  .trim()
-                  .isNotEmpty) ...[
-                const SizedBox(height: 12),
-
-                SavedDataRow(
-                  title: 'Catatan',
-                  value:
-                      noteController.text.trim(),
+                  ],
                 ),
-              ],
+              ),
+            ],
+
+            // ==========================================
+            // SARAN SESUAI MOOD
+            // ==========================================
+
+            if (selectedMood != null) ...[
+              const SizedBox(height: 27),
+              recommendationSection(),
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ======================================================
-// HASIL CATATAN
-// ======================================================
-
-class SavedDataRow extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const SavedDataRow({
-    super.key,
-    required this.title,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(
-            0xFFEFE4E8,
-          ),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: kTextSoft,
-              fontSize: 11,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            value,
-            style: const TextStyle(
-              color: kTextDark,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }

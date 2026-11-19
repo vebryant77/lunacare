@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
 
-// ======================================================
-// WARNA
-// ======================================================
+import 'package:flutter/material.dart';
+import 'services/period_repository.dart';
 
 const Color kPink = Color(0xFFD97E9E);
 const Color kPinkDark = Color(0xFFC85F87);
@@ -10,24 +8,28 @@ const Color kPinkLight = Color(0xFFFFEAF1);
 const Color kBackground = Color(0xFFFFF9FB);
 const Color kTextDark = Color(0xFF493A42);
 const Color kTextSoft = Color(0xFF8B7B83);
+const Color kBorder = Color(0xFFEDE3E7);
 
-// ======================================================
-// DATA YANG DIKIRIM KE HOMEPAGE
-// ======================================================
-
+// Kompatibilitas dengan navigasi versi sebelumnya.
 class PeriodData {
   final DateTime start;
-  final DateTime end;
+  final DateTime? end;
 
   const PeriodData({
     required this.start,
-    required this.end,
+    this.end,
   });
 }
 
-// ======================================================
-// CALENDAR PAGE
-// ======================================================
+String formatPeriodDate(DateTime date) {
+  const months = [
+    'Januari', 'Februari', 'Maret', 'April',
+    'Mei', 'Juni', 'Juli', 'Agustus',
+    'September', 'Oktober', 'November', 'Desember',
+  ];
+
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
 
 class CalendarPage extends StatefulWidget {
   final DateTime? initialStart;
@@ -40,378 +42,731 @@ class CalendarPage extends StatefulWidget {
   });
 
   @override
-  State<CalendarPage> createState() =>
-      _CalendarPageState();
+  State<CalendarPage> createState() => _CalendarPageState();
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  late DateTime currentMonth;
+  final repository = PeriodRepository.instance;
 
-  DateTime? periodStart;
-  DateTime? periodEnd;
+  List<PeriodEntry> periods = [];
+  DateTime visibleMonth = DateTime(
+    DateTime.now().year,
+    DateTime.now().month,
+  );
+
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
+    loadPeriods();
+  }
 
-    periodStart = widget.initialStart;
-    periodEnd = widget.initialEnd;
+  Future<void> loadPeriods() async {
+    try {
+      final data = await repository.getPeriods();
 
-    if (periodStart != null) {
-      currentMonth = DateTime(
-        periodStart!.year,
-        periodStart!.month,
-      );
-    } else {
-      currentMonth = DateTime.now();
+      if (!mounted) return;
+
+      setState(() {
+        periods = data;
+        loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+      });
+
+      showMessage('Gagal memuat riwayat: $error');
     }
   }
 
-  // ======================================================
-  // NAMA BULAN
-  // ======================================================
+  void showMessage(String message) {
+    if (!mounted) return;
 
-  String monthName(int month) {
-    const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
-
-    return months[month - 1];
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
-  String formatDate(DateTime date) {
-    return '${date.day} ${monthName(date.month)} ${date.year}';
-  }
-
-  // ======================================================
-  // BULAN
-  // ======================================================
-
-  void previousMonth() {
+  void changeMonth(int offset) {
     setState(() {
-      currentMonth = DateTime(
-        currentMonth.year,
-        currentMonth.month - 1,
+      visibleMonth = DateTime(
+        visibleMonth.year,
+        visibleMonth.month + offset,
       );
     });
   }
 
-  void nextMonth() {
-    setState(() {
-      currentMonth = DateTime(
-        currentMonth.year,
-        currentMonth.month + 1,
+  bool sameDay(DateTime a, DateTime b) {
+    return DateUtils.isSameDay(a, b);
+  }
+
+  bool isPeriodDay(DateTime date) {
+    for (final period in periods) {
+      final start = DateUtils.dateOnly(period.startDate);
+      final end = DateUtils.dateOnly(
+        period.endDate ?? period.startDate,
       );
-    });
-  }
 
-  // ======================================================
-  // CEK MENSTRUASI
-  // ======================================================
-
-  bool isPeriodDate(DateTime date) {
-    if (periodStart == null ||
-        periodEnd == null) {
-      return false;
+      if (!date.isBefore(start) && !date.isAfter(end)) {
+        return true;
+      }
     }
-
-    final selected =
-        DateUtils.dateOnly(date);
-
-    final start =
-        DateUtils.dateOnly(periodStart!);
-
-    final end =
-        DateUtils.dateOnly(periodEnd!);
-
-    return !selected.isBefore(start) &&
-        !selected.isAfter(end);
+    return false;
   }
 
-  // ======================================================
-  // FORM INPUT MENSTRUASI
-  // ======================================================
+  bool isStartDay(DateTime date) {
+    return periods.any(
+      (period) => sameDay(period.startDate, date),
+    );
+  }
 
-  Future<void> showPeriodForm() async {
-    DateTime? temporaryStart = periodStart;
-    DateTime? temporaryEnd = periodEnd;
+  // ====================================================
+  // TAMBAH / EDIT MENSTRUASI
+  // ====================================================
 
-    final result =
-        await showModalBottomSheet<PeriodData>(
+  Future<void> openEditor({
+    PeriodEntry? editing,
+  }) async {
+    DateTime start = DateUtils.dateOnly(
+      editing?.startDate ?? DateTime.now(),
+    );
+
+    DateTime? end = editing?.endDate;
+    bool saving = false;
+
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
-          top: Radius.circular(25),
+          top: Radius.circular(22),
         ),
       ),
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (
-            context,
-            setBottomSheetState,
-          ) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                22,
-                20,
-                22,
-                MediaQuery.of(context)
-                        .viewInsets
-                        .bottom +
-                    30,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 45,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color:
-                            Colors.grey.shade300,
-                        borderRadius:
-                            BorderRadius.circular(
-                                10),
+          builder: (sheetContext, updateSheet) {
+            Future<void> pickStart() async {
+              final selected = await showDatePicker(
+                context: sheetContext,
+                initialDate: start,
+                firstDate: DateTime(2020),
+                lastDate: DateUtils.dateOnly(DateTime.now()),
+                helpText: 'Tanggal Mulai Menstruasi',
+              );
+
+              if (selected == null ||
+                  !sheetContext.mounted) {
+                return;
+              }
+
+              updateSheet(() {
+                start = DateUtils.dateOnly(selected);
+
+                if (end != null && end!.isBefore(start)) {
+                  end = null;
+                }
+              });
+            }
+
+            Future<void> pickEnd() async {
+              final today = DateUtils.dateOnly(
+                DateTime.now(),
+              );
+
+              final selected = await showDatePicker(
+                context: sheetContext,
+                initialDate: end ?? start,
+                firstDate: start,
+                lastDate: today,
+                helpText: 'Tanggal Selesai Menstruasi',
+              );
+
+              if (selected != null &&
+                  sheetContext.mounted) {
+                updateSheet(() {
+                  end = DateUtils.dateOnly(selected);
+                });
+              }
+            }
+
+            Future<void> save() async {
+              if (saving) return;
+
+              final today = DateUtils.dateOnly(
+                DateTime.now(),
+              );
+
+              if (start.isAfter(today)) {
+                showMessage(
+                  'Tanggal mulai tidak boleh di masa depan.',
+                );
+                return;
+              }
+
+              if (end != null &&
+                  (end!.isBefore(start) ||
+                      end!.isAfter(today))) {
+                showMessage(
+                  'Tanggal selesai tidak valid.',
+                );
+                return;
+              }
+
+              // Cegah periode yang saling bertumpukan.
+              final newEnd = end ?? start;
+
+              for (final other in periods) {
+                if (other.id == editing?.id) continue;
+
+                final otherStart = other.startDate;
+                final otherEnd =
+                    other.endDate ?? other.startDate;
+
+                final overlaps =
+                    !newEnd.isBefore(otherStart) &&
+                    !start.isAfter(otherEnd);
+
+                if (overlaps) {
+                  showMessage(
+                    'Tanggal ini bertumpukan dengan '
+                    'riwayat menstruasi lain.',
+                  );
+                  return;
+                }
+              }
+
+              updateSheet(() {
+                saving = true;
+              });
+
+              try {
+                await repository.savePeriod(
+                  PeriodEntry(
+                    id: editing?.id,
+                    startDate: start,
+                    endDate: end,
+                  ),
+                );
+
+                if (!mounted) return;
+
+                if (sheetContext.mounted) {
+                  Navigator.pop(sheetContext);
+                }
+
+                await loadPeriods();
+
+                showMessage(
+                  editing == null
+                      ? 'Menstruasi berhasil dicatat.'
+                      : 'Catatan menstruasi diperbarui.',
+                );
+              } catch (error) {
+                showMessage(
+                  'Gagal menyimpan. Pastikan tanggal '
+                  'mulai tidak sama dengan catatan lain. '
+                  '$error',
+                );
+
+                if (sheetContext.mounted) {
+                  updateSheet(() {
+                    saving = false;
+                  });
+                }
+              }
+            }
+
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  22,
+                  24,
+                  22,
+                  MediaQuery.of(sheetContext)
+                          .viewInsets.bottom +
+                      26,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      editing == null
+                          ? 'Catat Menstruasi'
+                          : 'Edit Menstruasi',
+                      style: const TextStyle(
+                        color: kTextDark,
+                        fontSize: 21,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 22),
+                    const SizedBox(height: 7),
 
-                  const Text(
-                    'Catat Menstruasi',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight:
-                          FontWeight.bold,
-                      color: kTextDark,
+                    const Text(
+                      'Masukkan tanggal berdasarkan '
+                      'menstruasi yang benar-benar dialami.',
+                      style: TextStyle(
+                        color: kTextSoft,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 6),
+                    const SizedBox(height: 24),
 
-                  const Text(
-                    'Masukkan tanggal mulai dan selesai menstruasi.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: kTextSoft,
+                    const Text(
+                      'Tanggal Mulai',
+                      style: TextStyle(
+                        color: kTextDark,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 8),
 
-                  // =========================================
-                  // TANGGAL MULAI
-                  // =========================================
-
-                  const Text(
-                    'Tanggal Mulai',
-                    style: TextStyle(
-                      color: kTextDark,
-                      fontWeight:
-                          FontWeight.w600,
+                    dateSelector(
+                      text: formatPeriodDate(start),
+                      onTap: pickStart,
                     ),
-                  ),
 
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 18),
 
-                  InkWell(
-                    onTap: () async {
-                      final picked =
-                          await showDatePicker(
-                        context: context,
-                        initialDate:
-                            temporaryStart ??
-                                DateTime.now(),
-                        firstDate:
-                            DateTime(2020),
-                        lastDate:
-                            DateTime(2035),
-                      );
+                    const Text(
+                      'Tanggal Selesai (Opsional)',
+                      style: TextStyle(
+                        color: kTextDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
 
-                      if (picked != null) {
-                        setBottomSheetState(
-                          () {
-                            temporaryStart =
-                                picked;
+                    const SizedBox(height: 8),
 
-                            if (temporaryEnd !=
-                                    null &&
-                                temporaryEnd!
-                                    .isBefore(
-                                  temporaryStart!,
-                                )) {
-                              temporaryEnd =
-                                  null;
-                            }
+                    dateSelector(
+                      text: end == null
+                          ? 'Belum dicatat'
+                          : formatPeriodDate(end!),
+                      onTap: pickEnd,
+                    ),
+
+                    if (end != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: () {
+                            updateSheet(() {
+                              end = null;
+                            });
                           },
-                        );
-                      }
-                    },
-                    child: InputDateBox(
-                      icon: Icons
-                          .calendar_month_outlined,
-                      text:
-                          temporaryStart ==
-                                  null
-                              ? 'Pilih tanggal mulai'
-                              : formatDate(
-                                  temporaryStart!,
-                                ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  // =========================================
-                  // TANGGAL SELESAI
-                  // =========================================
-
-                  const Text(
-                    'Tanggal Selesai',
-                    style: TextStyle(
-                      color: kTextDark,
-                      fontWeight:
-                          FontWeight.w600,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  InkWell(
-                    onTap:
-                        temporaryStart == null
-                            ? null
-                            : () async {
-                                final picked =
-                                    await showDatePicker(
-                                  context:
-                                      context,
-                                  initialDate:
-                                      temporaryEnd ??
-                                          temporaryStart!,
-                                  firstDate:
-                                      temporaryStart!,
-                                  lastDate:
-                                      DateTime(
-                                    2035,
-                                  ),
-                                );
-
-                                if (picked !=
-                                    null) {
-                                  setBottomSheetState(
-                                    () {
-                                      temporaryEnd =
-                                          picked;
-                                    },
-                                  );
-                                }
-                              },
-                    child: InputDateBox(
-                      icon: Icons
-                          .event_available_outlined,
-                      text:
-                          temporaryEnd == null
-                              ? 'Pilih tanggal selesai'
-                              : formatDate(
-                                  temporaryEnd!,
-                                ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 28),
-
-                  // =========================================
-                  // SIMPAN
-                  // =========================================
-
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton(
-                      onPressed:
-                          temporaryStart ==
-                                      null ||
-                                  temporaryEnd ==
-                                      null
-                              ? null
-                              : () {
-                                  Navigator.pop(
-                                    sheetContext,
-                                    PeriodData(
-                                      start:
-                                          temporaryStart!,
-                                      end:
-                                          temporaryEnd!,
-                                    ),
-                                  );
-                                },
-                      style:
-                          FilledButton.styleFrom(
-                        backgroundColor: kPink,
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(
-                            15,
+                          child: const Text(
+                            'Kosongkan Tanggal Selesai',
                           ),
                         ),
                       ),
-                      child: const Text(
-                        'Simpan',
-                        style: TextStyle(
-                          fontWeight:
-                              FontWeight.bold,
+
+                    const SizedBox(height: 20),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: FilledButton.icon(
+                        onPressed: saving ? null : save,
+                        icon: const Icon(
+                          Icons.save_outlined,
+                        ),
+                        label: Text(
+                          saving
+                              ? 'Menyimpan...'
+                              : 'Simpan Menstruasi',
+                        ),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: kPink,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
         );
       },
     );
+  }
 
-    // ==================================================
-    // SETELAH SIMPAN
-    // LANGSUNG KEMBALI KE HOMEPAGE
-    // ==================================================
+  Widget dateSelector({
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: kBackground,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(11),
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(
+            border: Border.all(color: kBorder),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.calendar_today_outlined,
+                color: kPinkDark,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  text,
+                  style: const TextStyle(
+                    color: kTextDark,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down,
+                color: kTextSoft,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-    if (result != null && mounted) {
-      setState(() {
-        periodStart = result.start;
-        periodEnd = result.end;
-      });
+  // ====================================================
+  // HAPUS MENSTRUASI
+  // ====================================================
 
-      Navigator.pop(
-        context,
-        result,
-      );
+  Future<void> deletePeriod(PeriodEntry period) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Hapus Menstruasi?'),
+          content: Text(
+            'Catatan ${formatPeriodDate(period.startDate)} '
+            'akan dihapus.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.pop(dialogContext, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: kPinkDark,
+              ),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, true),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || period.id == null) {
+      return;
+    }
+
+    try {
+      await repository.deletePeriod(period.id!);
+      await loadPeriods();
+      showMessage('Catatan menstruasi dihapus.');
+    } catch (error) {
+      showMessage('Gagal menghapus catatan: $error');
     }
   }
 
-  // ======================================================
+  // ====================================================
+  // GRID KALENDER
+  // ====================================================
+
+  Widget buildCalendar() {
+    const weekdays = [
+      'Sen', 'Sel', 'Rab', 'Kam',
+      'Jum', 'Sab', 'Min',
+    ];
+
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April',
+      'Mei', 'Juni', 'Juli', 'Agustus',
+      'September', 'Oktober', 'November', 'Desember',
+    ];
+
+    final first = DateTime(
+      visibleMonth.year,
+      visibleMonth.month,
+      1,
+    );
+
+    final days = DateTime(
+      visibleMonth.year,
+      visibleMonth.month + 1,
+      0,
+    ).day;
+
+    final leadingBlanks = first.weekday - 1;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => changeMonth(-1),
+                icon: const Icon(
+                  Icons.chevron_left,
+                  color: kPinkDark,
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  '${months[visibleMonth.month - 1]} '
+                  '${visibleMonth.year}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: kTextDark,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: () => changeMonth(1),
+                icon: const Icon(
+                  Icons.chevron_right,
+                  color: kPinkDark,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: weekdays
+                .map(
+                  (day) => Expanded(
+                    child: Center(
+                      child: Text(
+                        day,
+                        style: const TextStyle(
+                          color: kTextSoft,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+
+          const SizedBox(height: 10),
+
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: leadingBlanks + days,
+            gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, index) {
+              if (index < leadingBlanks) {
+                return const SizedBox.shrink();
+              }
+
+              final day = index - leadingBlanks + 1;
+
+              final date = DateTime(
+                visibleMonth.year,
+                visibleMonth.month,
+                day,
+              );
+
+              final periodDay = isPeriodDay(date);
+              final startDay = isStartDay(date);
+              final isToday = DateUtils.isSameDay(
+                date,
+                DateTime.now(),
+              );
+
+              return Center(
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: startDay
+                        ? kPinkDark
+                        : periodDay
+                            ? kPinkLight
+                            : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: isToday && !startDay
+                        ? Border.all(color: kPink)
+                        : null,
+                  ),
+                  child: Text(
+                    '$day',
+                    style: TextStyle(
+                      color: startDay
+                          ? Colors.white
+                          : kTextDark,
+                      fontSize: 12,
+                      fontWeight: startDay || isToday
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+
+          const SizedBox(height: 14),
+
+          const Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              CalendarLegend(
+                color: kPinkDark,
+                text: 'Mulai Haid',
+              ),
+              CalendarLegend(
+                color: kPinkLight,
+                text: 'Hari Haid',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ====================================================
+  // CARD RIWAYAT
+  // ====================================================
+
+  Widget historyCard(PeriodEntry period) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: kBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 45,
+            height: 45,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: kPinkLight,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Icon(
+              Icons.water_drop_outlined,
+              color: kPinkDark,
+            ),
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
+              children: [
+                Text(
+                  formatPeriodDate(period.startDate),
+                  style: const TextStyle(
+                    color: kTextDark,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                const SizedBox(height: 6),
+
+                Text(
+                  period.endDate == null
+                      ? 'Tanggal selesai belum dicatat'
+                      : 'Selesai: '
+                        '${formatPeriodDate(period.endDate!)}',
+                  style: const TextStyle(
+                    color: kTextSoft,
+                    fontSize: 11,
+                  ),
+                ),
+
+                if (period.duration != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Durasi: ${period.duration} hari',
+                    style: const TextStyle(
+                      color: kPinkDark,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          IconButton(
+            tooltip: 'Edit',
+            onPressed: () => openEditor(editing: period),
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: kPinkDark,
+            ),
+          ),
+
+          IconButton(
+            tooltip: 'Hapus',
+            onPressed: () => deletePeriod(period),
+            icon: const Icon(
+              Icons.delete_outline,
+              color: kTextSoft,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ====================================================
   // BUILD
-  // ======================================================
+  // ====================================================
 
   @override
   Widget build(BuildContext context) {
@@ -421,495 +776,183 @@ class _CalendarPageState extends State<CalendarPage> {
       appBar: AppBar(
         backgroundColor: kBackground,
         surfaceTintColor: Colors.transparent,
-        elevation: 0,
-
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: kTextDark,
-          ),
-        ),
-
         title: const Text(
-          'Kalender Siklus',
+          'Kalender Menstruasi',
           style: TextStyle(
             color: kTextDark,
+            fontSize: 19,
             fontWeight: FontWeight.bold,
-            fontSize: 20,
           ),
         ),
       ),
 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          10,
-          20,
-          30,
-        ),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            // ==================================================
-            // INFO
-            // ==================================================
-
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: kPinkLight,
-                borderRadius:
-                    BorderRadius.circular(18),
+      body: loading
+          ? const Center(
+              child: CircularProgressIndicator(
+                color: kPink,
               ),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.favorite_border,
-                    color: kPinkDark,
-                    size: 30,
-                  ),
-
-                  SizedBox(width: 14),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pantau Siklusmu',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight:
-                                FontWeight.bold,
-                            color: kTextDark,
-                          ),
-                        ),
-
-                        SizedBox(height: 3),
-
-                        Text(
-                          'Catat tanggal menstruasi untuk membantu memantau siklus.',
-                          style: TextStyle(
-                            color: kTextSoft,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 22),
-
-            // ==================================================
-            // KALENDER
-            // ==================================================
-
-            Container(
-              padding:
-                  const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(22),
-                boxShadow: const [
-                  BoxShadow(
-                    color:
-                        Color(0x0B493A42),
-                    blurRadius: 10,
-                    offset:
-                        Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed:
-                            previousMonth,
-                        icon: const Icon(
-                          Icons.chevron_left,
-                          color: kPinkDark,
-                        ),
-                      ),
-
-                      Expanded(
-                        child: Text(
-                          '${monthName(currentMonth.month)} ${currentMonth.year}',
-                          textAlign:
-                              TextAlign.center,
-                          style:
-                              const TextStyle(
-                            color: kTextDark,
-                            fontSize: 17,
-                            fontWeight:
-                                FontWeight.bold,
-                          ),
-                        ),
-                      ),
-
-                      IconButton(
-                        onPressed:
-                            nextMonth,
-                        icon: const Icon(
-                          Icons.chevron_right,
-                          color: kPinkDark,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  const Row(
-                    children: [
-                      DayHeader('Sen'),
-                      DayHeader('Sel'),
-                      DayHeader('Rab'),
-                      DayHeader('Kam'),
-                      DayHeader('Jum'),
-                      DayHeader('Sab'),
-                      DayHeader('Min'),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  buildCalendarDays(),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // ==================================================
-            // CATATAN
-            // ==================================================
-
-            Container(
-              width: double.infinity,
-              padding:
-                  const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius:
-                    BorderRadius.circular(22),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                20, 16, 20, 35,
               ),
               child: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Catatan Menstruasi',
+                    'Pantau Siklus Menstruasimu',
                     style: TextStyle(
                       color: kTextDark,
-                      fontSize: 17,
-                      fontWeight:
-                          FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 7),
 
-                  if (periodStart == null ||
-                      periodEnd == null)
-                    const Text(
-                      'Belum ada data menstruasi yang dicatat.',
-                      style: TextStyle(
-                        color: kTextSoft,
+                  const Text(
+                    'Catat menstruasi dari bulan ke bulan '
+                    'untuk melihat pola siklusmu.',
+                    style: TextStyle(
+                      color: kTextSoft,
+                      fontSize: 12,
+                      height: 1.5,
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  buildCalendar(),
+
+                  const SizedBox(height: 18),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 49,
+                    child: FilledButton.icon(
+                      onPressed: () => openEditor(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: kPink,
+                        shape: RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.add),
+                      label: const Text(
+                        'Tambah Catatan Menstruasi',
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 29),
+
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Riwayat Menstruasi',
+                          style: TextStyle(
+                            color: kTextDark,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${periods.length} catatan',
+                        style: const TextStyle(
+                          color: kTextSoft,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 13),
+
+                  if (periods.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(25),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius:
+                            BorderRadius.circular(12),
+                        border: Border.all(color: kBorder),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(
+                            Icons.event_note_outlined,
+                            color: kPinkDark,
+                            size: 32,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Belum ada catatan menstruasi',
+                            style: TextStyle(
+                              color: kTextDark,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     )
-                  else ...[
-                    PeriodInformation(
-                      title: 'Mulai',
-                      value: formatDate(
-                        periodStart!,
-                      ),
+                  else
+                    ...periods.reversed.map(historyCard),
+
+                  const SizedBox(height: 13),
+
+                  const Text(
+                    'Data disimpan secara lokal di '
+                    'perangkat ini. Menghapus aplikasi '
+                    'atau data aplikasi dapat '
+                    'menghapus riwayat.',
+                    style: TextStyle(
+                      color: kTextSoft,
+                      fontSize: 11,
+                      height: 1.5,
                     ),
-
-                    const SizedBox(height: 12),
-
-                    PeriodInformation(
-                      title: 'Selesai',
-                      value: formatDate(
-                        periodEnd!,
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    PeriodInformation(
-                      title: 'Durasi',
-                      value:
-                          '${periodEnd!.difference(periodStart!).inDays + 1} hari',
-                    ),
-                  ],
+                  ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // ==================================================
-            // BUTTON
-            // ==================================================
-
-            SizedBox(
-              width: double.infinity,
-              height: 54,
-              child: FilledButton.icon(
-                onPressed: showPeriodForm,
-                style:
-                    FilledButton.styleFrom(
-                  backgroundColor: kPink,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(16),
-                  ),
-                ),
-                icon: const Icon(
-                  Icons.add,
-                ),
-                label: Text(
-                  periodStart == null
-                      ? 'Catat Menstruasi'
-                      : 'Ubah Catatan Menstruasi',
-                  style: const TextStyle(
-                    fontWeight:
-                        FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ======================================================
-  // KALENDER DAYS
-  // ======================================================
-
-  Widget buildCalendarDays() {
-    final firstDay = DateTime(
-      currentMonth.year,
-      currentMonth.month,
-      1,
-    );
-
-    final totalDays = DateTime(
-      currentMonth.year,
-      currentMonth.month + 1,
-      0,
-    ).day;
-
-    final emptyBefore =
-        firstDay.weekday - 1;
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
-      itemCount:
-          emptyBefore + totalDays,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-      ),
-      itemBuilder: (
-        context,
-        index,
-      ) {
-        if (index < emptyBefore) {
-          return const SizedBox();
-        }
-
-        final day =
-            index - emptyBefore + 1;
-
-        final date = DateTime(
-          currentMonth.year,
-          currentMonth.month,
-          day,
-        );
-
-        final menstruation =
-            isPeriodDate(date);
-
-        final today =
-            DateUtils.isSameDay(
-          date,
-          DateTime.now(),
-        );
-
-        return Center(
-          child: Container(
-            width: 38,
-            height: 38,
-            alignment:
-                Alignment.center,
-            decoration: BoxDecoration(
-              color: menstruation
-                  ? kPink
-                  : today
-                      ? kPinkLight
-                      : Colors
-                          .transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$day',
-              style: TextStyle(
-                color: menstruation
-                    ? Colors.white
-                    : today
-                        ? kPinkDark
-                        : kTextDark,
-                fontSize: 12,
-                fontWeight:
-                    menstruation ||
-                            today
-                        ? FontWeight.bold
-                        : FontWeight
-                            .normal,
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
 
-// ======================================================
-// WIDGETS
-// ======================================================
-
-class InputDateBox extends StatelessWidget {
-  final IconData icon;
+class CalendarLegend extends StatelessWidget {
+  final Color color;
   final String text;
 
-  const InputDateBox({
+  const CalendarLegend({
     super.key,
-    required this.icon,
+    required this.color,
     required this.text,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding:
-          const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: kBackground,
-        borderRadius:
-            BorderRadius.circular(15),
-        border: Border.all(
-          color:
-              const Color(0xFFF0DFE6),
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: kPinkDark,
-          ),
-
-          const SizedBox(width: 12),
-
-          Text(
-            text,
-            style: const TextStyle(
-              color: kTextDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class DayHeader extends StatelessWidget {
-  final String text;
-
-  const DayHeader(
-    this.text, {
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: kTextSoft,
-            fontSize: 11,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class PeriodInformation
-    extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const PeriodInformation({
-    super.key,
-    required this.title,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 10,
           height: 10,
-          decoration:
-              const BoxDecoration(
-            color: kPink,
+          decoration: BoxDecoration(
+            color: color,
             shape: BoxShape.circle,
+            border: Border.all(color: kBorder),
           ),
         ),
-
-        const SizedBox(width: 10),
-
+        const SizedBox(width: 6),
         Text(
-          '$title:',
+          text,
           style: const TextStyle(
             color: kTextSoft,
-          ),
-        ),
-
-        const Spacer(),
-
-        Text(
-          value,
-          style: const TextStyle(
-            color: kTextDark,
-            fontWeight:
-                FontWeight.w600,
+            fontSize: 10,
           ),
         ),
       ],

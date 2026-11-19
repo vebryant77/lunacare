@@ -6,13 +6,10 @@ import 'mood_page.dart';
 import 'statistics_page.dart';
 import 'profile_page.dart';
 import 'artikel_page.dart' as artikel;
-
-void main() {
-  runApp(const LunaCareApp());
-}
+import 'services/period_repository.dart';
 
 // ======================================================
-// WARNA
+// WARNA LUNACARE
 // ======================================================
 
 const Color kPink = Color(0xFFD97E9E);
@@ -24,8 +21,13 @@ const Color kTextSoft = Color(0xFF8B7B83);
 const Color kBorder = Color(0xFFEDE3E7);
 
 // ======================================================
-// APP
+// MAIN
 // ======================================================
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const LunaCareApp());
+}
 
 class LunaCareApp extends StatelessWidget {
   const LunaCareApp({super.key});
@@ -33,14 +35,14 @@ class LunaCareApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       title: 'LunaCare',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: kBackground,
         colorScheme: ColorScheme.fromSeed(
           seedColor: kPink,
         ),
+        scaffoldBackgroundColor: kBackground,
       ),
       home: const LoginPage(),
     );
@@ -48,7 +50,7 @@ class LunaCareApp extends StatelessWidget {
 }
 
 // ======================================================
-// LOGIN
+// LOGIN DEMO
 // ======================================================
 
 class LoginPage extends StatefulWidget {
@@ -62,23 +64,13 @@ class _LoginPageState extends State<LoginPage> {
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  bool hidePassword = true;
+  bool obscurePassword = true;
 
   @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
-  }
-
-  void login() {
-    // Login demo, belum Firebase.
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const HomePage(),
-      ),
-    );
   }
 
   InputDecoration inputStyle(
@@ -92,11 +84,19 @@ class _LoginPageState extends State<LoginPage> {
       fillColor: Colors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: kBorder),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: kBorder),
+      ),
+    );
+  }
+
+  void login() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const HomePage(),
       ),
     );
   }
@@ -108,10 +108,7 @@ class _LoginPageState extends State<LoginPage> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 28,
-              vertical: 30,
-            ),
+            padding: const EdgeInsets.all(28),
             child: ConstrainedBox(
               constraints: const BoxConstraints(
                 maxWidth: 430,
@@ -122,8 +119,8 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const Icon(
                     Icons.nightlight_round,
-                    color: kPink,
                     size: 56,
+                    color: kPink,
                   ),
 
                   const SizedBox(height: 10),
@@ -149,7 +146,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 45),
+                  const SizedBox(height: 43),
 
                   const Text(
                     'Selamat Datang',
@@ -160,7 +157,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 7),
 
                   const Text(
                     'Masuk untuk melanjutkan ke LunaCare.',
@@ -170,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 26),
 
                   const Text(
                     'Email',
@@ -184,7 +181,8 @@ class _LoginPageState extends State<LoginPage> {
 
                   TextField(
                     controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
+                    keyboardType:
+                        TextInputType.emailAddress,
                     decoration: inputStyle(
                       'Masukkan email',
                       Icons.email_outlined,
@@ -205,7 +203,7 @@ class _LoginPageState extends State<LoginPage> {
 
                   TextField(
                     controller: passwordController,
-                    obscureText: hidePassword,
+                    obscureText: obscurePassword,
                     decoration: inputStyle(
                       'Masukkan password',
                       Icons.lock_outline,
@@ -213,11 +211,12 @@ class _LoginPageState extends State<LoginPage> {
                       suffixIcon: IconButton(
                         onPressed: () {
                           setState(() {
-                            hidePassword = !hidePassword;
+                            obscurePassword =
+                                !obscurePassword;
                           });
                         },
                         icon: Icon(
-                          hidePassword
+                          obscurePassword
                               ? Icons.visibility_outlined
                               : Icons.visibility_off_outlined,
                         ),
@@ -228,7 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 24),
 
                   SizedBox(
-                    height: 52,
+                    height: 50,
                     child: FilledButton(
                       onPressed: login,
                       style: FilledButton.styleFrom(
@@ -238,33 +237,19 @@ class _LoginPageState extends State<LoginPage> {
                               BorderRadius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'Masuk',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: const Text('Masuk'),
                     ),
                   ),
 
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 23),
 
-                  const Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Belum punya akun? ',
-                        style: TextStyle(color: kTextSoft),
-                      ),
-                      Text(
-                        'Daftar',
-                        style: TextStyle(
-                          color: kPinkDark,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'Login masih menggunakan mode demo.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: kTextSoft,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -288,124 +273,164 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  DateTime? periodStart;
-  DateTime? periodEnd;
+  final repository = PeriodRepository.instance;
 
-  String formatDate(DateTime date) {
-    const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
-    ];
+  List<PeriodEntry> periods = [];
 
-    return '${date.day} ${months[date.month - 1]} '
-        '${date.year}';
+  @override
+  void initState() {
+    super.initState();
+    loadMenstrualHistory();
   }
 
-  // ====================================================
-  // DATA SIKLUS
-  // ====================================================
+  Future<void> loadMenstrualHistory() async {
+    try {
+      final data = await repository.getPeriods();
 
-  int get periodDuration {
-    if (periodStart == null || periodEnd == null) {
-      return 0;
+      if (!mounted) return;
+
+      setState(() {
+        periods = data;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal memuat riwayat menstruasi: $error',
+          ),
+        ),
+      );
     }
-
-    return DateUtils.dateOnly(periodEnd!)
-            .difference(DateUtils.dateOnly(periodStart!))
-            .inDays +
-        1;
   }
+
+  PeriodEntry? get latestPeriod {
+    if (periods.isEmpty) return null;
+    return periods.last;
+  }
+
+  DateTime? get periodStart => latestPeriod?.startDate;
+
+  DateTime? get periodEnd => latestPeriod?.endDate;
+
+  int? get periodDuration => latestPeriod?.duration;
+
+  // ====================================================
+  // HITUNG HARI SIKLUS
+  // ====================================================
 
   int? get cycleDay {
     if (periodStart == null) return null;
 
-    final today = DateUtils.dateOnly(DateTime.now());
-    final start = DateUtils.dateOnly(periodStart!);
-
-    final difference = today.difference(start).inDays;
+    final difference = DateUtils.dateOnly(
+      DateTime.now(),
+    ).difference(
+      DateUtils.dateOnly(periodStart!),
+    ).inDays;
 
     if (difference < 0) return null;
 
     return difference + 1;
   }
 
-  DateTime? get nextPeriod {
-    if (periodStart == null) return null;
+  // ====================================================
+  // PERKIRAAN BERDASARKAN RIWAYAT
+  // ====================================================
 
-    // Prediksi demo sementara: siklus 28 hari.
-    return DateUtils.dateOnly(periodStart!).add(
-      const Duration(days: 28),
+  int? get averageCycleLength {
+    if (periods.length < 2) return null;
+
+    int totalDays = 0;
+    int totalCycles = 0;
+
+    for (int i = 1; i < periods.length; i++) {
+      final difference = periods[i]
+          .startDate
+          .difference(periods[i - 1].startDate)
+          .inDays;
+
+      if (difference > 0) {
+        totalDays += difference;
+        totalCycles++;
+      }
+    }
+
+    if (totalCycles == 0) return null;
+
+    return (totalDays / totalCycles).round();
+  }
+
+  DateTime? get nextPeriod {
+    final start = periodStart;
+    final average = averageCycleLength;
+
+    if (start == null || average == null) {
+      return null;
+    }
+
+    return DateUtils.dateOnly(start).add(
+      Duration(days: average),
     );
   }
 
+  String formatDate(DateTime date) {
+    return formatPeriodDate(date);
+  }
+
   // ====================================================
-  // NAVIGASI HALAMAN
+  // NAVIGASI KALENDER
   // ====================================================
 
   Future<void> openCalendar() async {
-    final result = await Navigator.push<PeriodData>(
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
-        builder: (context) => CalendarPage(
-          initialStart: periodStart,
-          initialEnd: periodEnd,
-        ),
+        builder: (_) => const CalendarPage(),
       ),
     );
 
     if (!mounted) return;
 
-    if (result != null) {
-      setState(() {
-        periodStart = result.start;
-        periodEnd = result.end;
-      });
-    }
+    // Baca ulang SQLite setelah kembali dari Kalender.
+    await loadMenstrualHistory();
   }
 
-  void openMoodPage() {
+  // ====================================================
+  // NAVIGASI MOOD
+  // ====================================================
+
+  void openMood() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const MoodPage(),
+        builder: (_) => const MoodPage(),
       ),
     );
   }
 
-  void openStatisticsPage() {
+  // ====================================================
+  // NAVIGASI STATISTIK
+  // ====================================================
+
+  void openStatistics() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const StatisticsPage(),
+        builder: (_) => const StatisticsPage(),
       ),
     );
   }
 
-  void openProfilePage() {
+  // ====================================================
+  // NAVIGASI PROFIL
+  // ====================================================
+
+  void openProfile() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const ProfilePage(),
-      ),
-    );
-  }
-
-  void chatbotComingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Fitur Chatbot masih dalam tahap pengembangan.',
-        ),
+        builder: (_) => const ProfilePage(),
       ),
     );
   }
@@ -418,12 +443,13 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
+
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
             HomeHeader(
-              onProfileTap: openProfilePage,
+              onProfileTap: openProfile,
             ),
 
             Expanded(
@@ -437,7 +463,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     const GreetingSection(),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 23),
 
                     CycleStatusCard(
                       cycleDay: cycleDay,
@@ -446,15 +472,14 @@ class _HomePageState extends State<HomePage> {
                       formatDate: formatDate,
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 27),
 
                     MainMenuSection(
                       onCalendarTap: openCalendar,
-                      onMoodTap: openMoodPage,
-                      onChatbotTap: chatbotComingSoon,
+                      onMoodTap: openMood,
                     ),
 
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 28),
 
                     HomeCalendarSection(
                       periodStart: periodStart,
@@ -464,15 +489,13 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 26),
 
                     SummarySection(
-                      periodStart: periodStart,
+                      latestPeriod: latestPeriod,
                       nextPeriod: nextPeriod,
-                      duration: periodDuration,
                       formatDate: formatDate,
                     ),
 
                     const SizedBox(height: 30),
 
-                    // ARTIKEL SUDAH BISA DIKLIK
                     const ArtikelHomeSection(),
                   ],
                 ),
@@ -483,8 +506,8 @@ class _HomePageState extends State<HomePage> {
               top: false,
               child: BottomNavigation(
                 onCalendarTap: openCalendar,
-                onStatisticsTap: openStatisticsPage,
-                onProfileTap: openProfilePage,
+                onStatisticsTap: openStatistics,
+                onProfileTap: openProfile,
               ),
             ),
           ],
@@ -510,7 +533,9 @@ class HomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 20,
+      ),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -554,7 +579,6 @@ class HomeHeader extends StatelessWidget {
               child: Icon(
                 Icons.person_outline,
                 color: kPinkDark,
-                size: 21,
               ),
             ),
           ),
@@ -579,9 +603,9 @@ class GreetingSection extends StatelessWidget {
         Text(
           'Halo, User!',
           style: TextStyle(
+            color: kTextDark,
             fontSize: 27,
             fontWeight: FontWeight.bold,
-            color: kTextDark,
           ),
         ),
 
@@ -590,8 +614,8 @@ class GreetingSection extends StatelessWidget {
         Text(
           'Pantau siklus dan kondisi tubuhmu hari ini.',
           style: TextStyle(
-            fontSize: 13,
             color: kTextSoft,
+            fontSize: 13,
           ),
         ),
       ],
@@ -629,20 +653,20 @@ class CycleStatusCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 67,
+            height: 67,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.18),
+             color: Colors.white.withValues(alpha: 0.18),
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Icon(
               Icons.spa_outlined,
               color: Colors.white,
-              size: 37,
+              size: 35,
             ),
           ),
 
-          const SizedBox(width: 17),
+          const SizedBox(width: 15),
 
           Expanded(
             child: Column(
@@ -657,7 +681,7 @@ class CycleStatusCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
 
                 Text(
                   cycleDay == null
@@ -670,16 +694,15 @@ class CycleStatusCard extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
 
                 if (periodStart == null)
                   const Text(
-                    'Catat menstruasi untuk mulai '
-                    'memantau siklus.',
+                    'Catat menstruasi untuk '
+                    'mulai memantau siklus.',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 11,
-                      height: 1.3,
                     ),
                   )
                 else ...[
@@ -692,17 +715,20 @@ class CycleStatusCard extends StatelessWidget {
                     ),
                   ),
 
-                  if (nextPeriod != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      'Berikutnya: '
-                      '${formatDate(nextPeriod!)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                      ),
+                  const SizedBox(height: 4),
+
+                  Text(
+                    nextPeriod == null
+                        ? 'Prediksi tersedia setelah '
+                          'minimal dua catatan.'
+                        : 'Perkiraan berikutnya: '
+                          '${formatDate(nextPeriod!)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      height: 1.4,
                     ),
-                  ],
+                  ),
                 ],
               ],
             ),
@@ -720,13 +746,11 @@ class CycleStatusCard extends StatelessWidget {
 class MainMenuSection extends StatelessWidget {
   final VoidCallback onCalendarTap;
   final VoidCallback onMoodTap;
-  final VoidCallback onChatbotTap;
 
   const MainMenuSection({
     super.key,
     required this.onCalendarTap,
     required this.onMoodTap,
-    required this.onChatbotTap,
   });
 
   @override
@@ -750,28 +774,18 @@ class MainMenuSection extends StatelessWidget {
             Expanded(
               child: HomeMenuCard(
                 icon: Icons.calendar_month_outlined,
-                label: 'Catat\nMenstruasi',
+                label: 'Catat Menstruasi',
                 onTap: onCalendarTap,
               ),
             ),
 
-            const SizedBox(width: 10),
+            const SizedBox(width: 12),
 
             Expanded(
               child: HomeMenuCard(
                 icon: Icons.mood_outlined,
-                label: 'Mood &\nGejala',
+                label: 'Catat Mood',
                 onTap: onMoodTap,
-              ),
-            ),
-
-            const SizedBox(width: 10),
-
-            Expanded(
-              child: HomeMenuCard(
-                icon: Icons.chat_bubble_outline,
-                label: 'Chatbot\nAI',
-                onTap: onChatbotTap,
               ),
             ),
           ],
@@ -780,10 +794,6 @@ class MainMenuSection extends StatelessWidget {
     );
   }
 }
-
-// ======================================================
-// CARD MENU HORIZONTAL
-// ======================================================
 
 class HomeMenuCard extends StatelessWidget {
   final IconData icon;
@@ -806,24 +816,23 @@ class HomeMenuCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          height: 120,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 8,
-            vertical: 14,
-          ),
+          height: 118,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: kBorder),
           ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center,
             children: [
               Container(
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
                   color: kPinkLight,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius:
+                      BorderRadius.circular(12),
                 ),
                 child: Icon(
                   icon,
@@ -832,7 +841,7 @@ class HomeMenuCard extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
               Text(
                 label,
@@ -841,7 +850,6 @@ class HomeMenuCard extends StatelessWidget {
                   color: kTextDark,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  height: 1.2,
                 ),
               ),
             ],
@@ -853,7 +861,7 @@ class HomeMenuCard extends StatelessWidget {
 }
 
 // ======================================================
-// KALENDER HOMEPAGE
+// KALENDER MINI DI BERANDA
 // ======================================================
 
 class HomeCalendarSection extends StatelessWidget {
@@ -867,49 +875,40 @@ class HomeCalendarSection extends StatelessWidget {
   });
 
   bool isPeriod(DateTime date) {
-    if (periodStart == null || periodEnd == null) {
-      return false;
-    }
+    if (periodStart == null) return false;
 
-    final selected = DateUtils.dateOnly(date);
     final start = DateUtils.dateOnly(periodStart!);
-    final end = DateUtils.dateOnly(periodEnd!);
+    final end = DateUtils.dateOnly(
+      periodEnd ?? periodStart!,
+    );
 
-    return !selected.isBefore(start) &&
-        !selected.isAfter(end);
+    final day = DateUtils.dateOnly(date);
+
+    return !day.isBefore(start) && !day.isAfter(end);
   }
 
   @override
   Widget build(BuildContext context) {
-    final shownDate = periodStart ?? DateTime.now();
+    final shown = periodStart ?? DateTime.now();
 
-    final firstDay = DateTime(
-      shownDate.year,
-      shownDate.month,
+    final first = DateTime(
+      shown.year,
+      shown.month,
       1,
     );
 
-    final totalDays = DateTime(
-      shownDate.year,
-      shownDate.month + 1,
+    final days = DateTime(
+      shown.year,
+      shown.month + 1,
       0,
     ).day;
 
-    final emptyBefore = firstDay.weekday - 1;
+    final blankDays = first.weekday - 1;
 
     const months = [
-      'Januari',
-      'Februari',
-      'Maret',
-      'April',
-      'Mei',
-      'Juni',
-      'Juli',
-      'Agustus',
-      'September',
-      'Oktober',
-      'November',
-      'Desember',
+      'Januari', 'Februari', 'Maret', 'April',
+      'Mei', 'Juni', 'Juli', 'Agustus',
+      'September', 'Oktober', 'November', 'Desember',
     ];
 
     return Container(
@@ -917,28 +916,29 @@ class HomeCalendarSection extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(13),
         border: Border.all(color: kBorder),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
-                'Kalender Siklus',
-                style: TextStyle(
-                  color: kTextDark,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
+              const Expanded(
+                child: Text(
+                  'Kalender Siklus',
+                  style: TextStyle(
+                    color: kTextDark,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
 
-              const Spacer(),
-
               Text(
-                '${months[shownDate.month - 1]} '
-                '${shownDate.year}',
+                '${months[shown.month - 1]} '
+                '${shown.year}',
                 style: const TextStyle(
                   color: kTextSoft,
                   fontSize: 12,
@@ -965,28 +965,28 @@ class HomeCalendarSection extends StatelessWidget {
 
           GridView.builder(
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: emptyBefore + totalDays,
+            physics:
+                const NeverScrollableScrollPhysics(),
+            itemCount: blankDays + days,
             gridDelegate:
                 const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               childAspectRatio: 1,
             ),
             itemBuilder: (context, index) {
-              if (index < emptyBefore) {
-                return const SizedBox();
+              if (index < blankDays) {
+                return const SizedBox.shrink();
               }
 
-              final day = index - emptyBefore + 1;
+              final day = index - blankDays + 1;
 
               final date = DateTime(
-                shownDate.year,
-                shownDate.month,
+                shown.year,
+                shown.month,
                 day,
               );
 
-              final menstruation = isPeriod(date);
-
+              final highlighted = isPeriod(date);
               final today = DateUtils.isSameDay(
                 date,
                 DateTime.now(),
@@ -998,7 +998,7 @@ class HomeCalendarSection extends StatelessWidget {
                   height: 32,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: menstruation
+                    color: highlighted
                         ? kPink
                         : today
                             ? kPinkLight
@@ -1008,11 +1008,11 @@ class HomeCalendarSection extends StatelessWidget {
                   child: Text(
                     '$day',
                     style: TextStyle(
-                      color: menstruation
+                      color: highlighted
                           ? Colors.white
                           : kTextDark,
                       fontSize: 11,
-                      fontWeight: menstruation || today
+                      fontWeight: highlighted || today
                           ? FontWeight.bold
                           : FontWeight.normal,
                     ),
@@ -1027,15 +1027,11 @@ class HomeCalendarSection extends StatelessWidget {
   }
 }
 
-// ======================================================
-// LABEL HARI KALENDER
-// ======================================================
-
 class CalendarDay extends StatelessWidget {
-  final String text;
+  final String label;
 
   const CalendarDay(
-    this.text, {
+    this.label, {
     super.key,
   });
 
@@ -1044,7 +1040,7 @@ class CalendarDay extends StatelessWidget {
     return Expanded(
       child: Center(
         child: Text(
-          text,
+          label,
           style: const TextStyle(
             color: kTextSoft,
             fontSize: 10,
@@ -1056,35 +1052,45 @@ class CalendarDay extends StatelessWidget {
 }
 
 // ======================================================
-// RINGKASAN
+// RINGKASAN HOMEPAGE
 // ======================================================
 
 class SummarySection extends StatelessWidget {
-  final DateTime? periodStart;
+  final PeriodEntry? latestPeriod;
   final DateTime? nextPeriod;
-  final int duration;
   final String Function(DateTime) formatDate;
 
   const SummarySection({
     super.key,
-    required this.periodStart,
+    required this.latestPeriod,
     required this.nextPeriod,
-    required this.duration,
     required this.formatDate,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cycleText = periodStart == null
-        ? 'Belum ada data menstruasi.'
-        : 'Durasi haid: $duration hari\n'
-          'Asumsi panjang siklus: 28 hari';
+    String periodDescription =
+        'Belum ada catatan menstruasi.';
 
-    final nextText = nextPeriod == null
-        ? 'Perkiraan akan muncul setelah data '
-          'menstruasi dicatat.'
-        : 'Perkiraan haid berikutnya:\n'
-          '${formatDate(nextPeriod!)}';
+    if (latestPeriod != null) {
+      periodDescription =
+          'Mulai: ${formatDate(latestPeriod!.startDate)}';
+
+      if (latestPeriod!.duration != null) {
+        periodDescription +=
+            '\nDurasi: ${latestPeriod!.duration} hari';
+      } else {
+        periodDescription +=
+            '\nTanggal selesai belum dicatat.';
+      }
+    }
+
+    final nextDescription = nextPeriod == null
+        ? 'Belum cukup riwayat untuk membuat '
+          'perkiraan berdasarkan siklus.'
+        : '${formatDate(nextPeriod!)}\n'
+          'Perkiraan berdasarkan rata-rata '
+          'panjang siklus sebelumnya.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1102,8 +1108,8 @@ class SummarySection extends StatelessWidget {
 
         SimpleInfoBox(
           icon: Icons.history,
-          title: 'Siklus Menstruasi',
-          text: cycleText,
+          title: 'Menstruasi Terakhir',
+          text: periodDescription,
         ),
 
         const SizedBox(height: 10),
@@ -1111,16 +1117,12 @@ class SummarySection extends StatelessWidget {
         SimpleInfoBox(
           icon: Icons.event_outlined,
           title: 'Perkiraan Berikutnya',
-          text: nextText,
+          text: nextDescription,
         ),
       ],
     );
   }
 }
-
-// ======================================================
-// INFO RINGKASAN
-// ======================================================
 
 class SimpleInfoBox extends StatelessWidget {
   final IconData icon;
@@ -1157,7 +1159,6 @@ class SimpleInfoBox extends StatelessWidget {
             child: Icon(
               icon,
               color: kPinkDark,
-              size: 21,
             ),
           ),
 
@@ -1177,14 +1178,14 @@ class SimpleInfoBox extends StatelessWidget {
                   ),
                 ),
 
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
 
                 Text(
                   text,
                   style: const TextStyle(
                     color: kTextSoft,
                     fontSize: 11,
-                    height: 1.4,
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -1197,24 +1198,24 @@ class SimpleInfoBox extends StatelessWidget {
 }
 
 // ======================================================
-// ARTIKEL DI HOMEPAGE
+// ARTIKEL HOMEPAGE
 // ======================================================
 
 class ArtikelHomeSection extends StatelessWidget {
   const ArtikelHomeSection({super.key});
 
-  void bukaSemuaArtikel(BuildContext context) {
+  void openAllArticles(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const artikel.ArtikelPage(),
+        builder: (_) => const artikel.ArtikelPage(),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final artikelTerbaru =
+    final latestArticles =
         artikel.daftarArtikel.take(3).toList();
 
     return Column(
@@ -1222,52 +1223,46 @@ class ArtikelHomeSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Text(
-              'Artikel',
-              style: TextStyle(
-                color: kTextDark,
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+            const Expanded(
+              child: Text(
+                'Artikel',
+                style: TextStyle(
+                  color: kTextDark,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
 
-            const Spacer(),
-
-            // TOMBOL LIHAT SEMUA
             TextButton(
-              onPressed: () => bukaSemuaArtikel(context),
-              style: TextButton.styleFrom(
-                foregroundColor: kPinkDark,
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 30),
-                tapTargetSize:
-                    MaterialTapTargetSize.shrinkWrap,
-              ),
+              onPressed: () => openAllArticles(context),
               child: const Text(
                 'Lihat Semua',
-                style: TextStyle(fontSize: 11),
+                style: TextStyle(
+                  color: kPinkDark,
+                  fontSize: 11,
+                ),
               ),
             ),
           ],
         ),
 
-        const SizedBox(height: 13),
+        const SizedBox(height: 12),
 
-        // TIGA ARTIKEL PERTAMA
-        ...artikelTerbaru.map(
+        ...latestArticles.map(
           (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 14),
-            child: ArtikelHomeCard(artikelData: item),
+            padding: const EdgeInsets.only(
+              bottom: 13,
+            ),
+            child: ArtikelHomeCard(
+              artikelData: item,
+            ),
           ),
         ),
       ],
     );
   }
 }
-
-// ======================================================
-// CARD ARTIKEL HOMEPAGE
-// ======================================================
 
 class ArtikelHomeCard extends StatelessWidget {
   final artikel.Artikel artikelData;
@@ -1277,11 +1272,11 @@ class ArtikelHomeCard extends StatelessWidget {
     required this.artikelData,
   });
 
-  void bukaDetail(BuildContext context) {
+  void openArticle(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => artikel.DetailArtikelPage(
+        builder: (_) => artikel.DetailArtikelPage(
           artikel: artikelData,
         ),
       ),
@@ -1292,36 +1287,33 @@ class ArtikelHomeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(13),
       child: InkWell(
-        onTap: () => bukaDetail(context),
-        borderRadius: BorderRadius.circular(12),
+        onTap: () => openArticle(context),
+        borderRadius: BorderRadius.circular(13),
         child: Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(13),
             border: Border.all(color: kBorder),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
-              // PLACEHOLDER GAMBAR
               Container(
+                height: 140,
                 width: double.infinity,
-                height: 145,
                 decoration: const BoxDecoration(
                   color: Color(0xFFF1F1F1),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(13),
                   ),
                 ),
               ),
 
               Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  15, 13, 15, 15,
-                ),
+                padding: const EdgeInsets.all(15),
                 child: Column(
                   crossAxisAlignment:
                       CrossAxisAlignment.start,
@@ -1331,11 +1323,10 @@ class ArtikelHomeCard extends StatelessWidget {
                       style: const TextStyle(
                         color: kPinkDark,
                         fontSize: 10,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
 
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 6),
 
                     Text(
                       artikelData.judul,
@@ -1376,7 +1367,7 @@ class BottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(
-        8, 9, 8, 15,
+        8, 9, 8, 14,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -1429,10 +1420,6 @@ class BottomNavigation extends StatelessWidget {
   }
 }
 
-// ======================================================
-// BOTTOM NAV ITEM
-// ======================================================
-
 class BottomNavItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1448,7 +1435,9 @@ class BottomNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        vertical: 6,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
