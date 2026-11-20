@@ -8,9 +8,10 @@ import 'services/period_repository.dart';
 import 'services/health_report_service.dart';
 
 // ======================================================
-// WARNA LUNACARE
+// LUNACARE - STATISTICS & CYCLE TRENDS
 // ======================================================
 
+// WARNA
 const Color kPink = Color(0xFFD97E9E);
 const Color kPinkDark = Color(0xFFC85F87);
 const Color kPinkLight = Color(0xFFFFEAF1);
@@ -18,7 +19,6 @@ const Color kBackground = Color(0xFFFFF9FB);
 const Color kTextDark = Color(0xFF493A42);
 const Color kTextSoft = Color(0xFF8B7B83);
 const Color kBorder = Color(0xFFEDE3E7);
-
 const Color kOrange = Color(0xFFFFB22E);
 const Color kLine = Color(0xFF596579);
 
@@ -26,7 +26,7 @@ const int minCycle = 21;
 const int maxCycle = 35;
 
 // ======================================================
-// MODEL CYCLE TRENDS
+// MODEL CYCLE POINT
 // ======================================================
 
 class CyclePoint {
@@ -44,7 +44,7 @@ class CyclePoint {
 }
 
 // ======================================================
-// PERHITUNGAN PANJANG SIKLUS
+// HITUNG PANJANG SIKLUS
 // ======================================================
 
 List<CyclePoint> calculateCyclePoints(
@@ -52,8 +52,7 @@ List<CyclePoint> calculateCyclePoints(
 ) {
   final sorted = List<PeriodEntry>.from(periods)
     ..sort(
-      (a, b) =>
-          a.startDate.compareTo(b.startDate),
+      (a, b) => a.startDate.compareTo(b.startDate),
     );
 
   final result = <CyclePoint>[];
@@ -90,9 +89,7 @@ List<CyclePoint> calculateCyclePoints(
 // RATA-RATA SIKLUS
 // ======================================================
 
-double? averageCycle(
-  List<CyclePoint> cycles,
-) {
+double? averageCycle(List<CyclePoint> cycles) {
   if (cycles.isEmpty) return null;
 
   final total = cycles.fold<int>(
@@ -104,7 +101,7 @@ double? averageCycle(
 }
 
 // ======================================================
-// DATA DUMMY MENSTRUASI
+// DATA DUMMY KHUSUS MENSTRUASI
 // ======================================================
 
 final List<PeriodEntry> demoPeriods = [
@@ -135,73 +132,6 @@ final List<PeriodEntry> demoPeriods = [
   PeriodEntry(
     startDate: DateTime(2026, 11, 4),
     endDate: DateTime(2026, 11, 8),
-  ),
-];
-
-// ======================================================
-// DATA DUMMY MOOD
-// ======================================================
-
-final List<mood.MoodRecord> demoMoods = [
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 8),
-    mood: 'Senang',
-    note: 'Hari yang menyenangkan.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 9),
-    mood: 'Tenang',
-    note: 'Beristirahat dengan cukup.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 10),
-    mood: 'Senang',
-    note: 'Aktivitas berjalan lancar.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 11),
-    mood: 'Biasa',
-    note: 'Hari berjalan seperti biasa.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 12),
-    mood: 'Lelah',
-    note: 'Banyak aktivitas hari ini.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 13),
-    mood: 'Sedih',
-    note: 'Sedang tidak bersemangat.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 14),
-    mood: 'Senang',
-    note: 'Berkumpul bersama teman.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 15),
-    mood: 'Cemas',
-    note: 'Memikirkan beberapa tugas.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 16),
-    mood: 'Tenang',
-    note: 'Merasa lebih santai.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 17),
-    mood: 'Sedih',
-    note: 'Suasana hati kurang baik.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 18),
-    mood: 'Lelah',
-    note: 'Perlu banyak istirahat.',
-  ),
-  mood.MoodRecord(
-    date: DateTime(2026, 11, 19),
-    mood: 'Senang',
-    note: 'Suasana hati membaik.',
   ),
 ];
 
@@ -251,12 +181,16 @@ class StatisticsPage extends StatefulWidget {
 }
 
 class _StatisticsPageState extends State<StatisticsPage> {
-  final repository = PeriodRepository.instance;
+  final PeriodRepository repository =
+      PeriodRepository.instance;
 
   List<PeriodEntry> savedPeriods = [];
 
   bool loading = true;
+
+  // Sakelar ini hanya mengatur data menstruasi.
   bool showDemoData = true;
+
   bool generatingPdf = false;
 
   @override
@@ -266,7 +200,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // AMBIL DATA REPOSITORY
+  // AMBIL DATA MENSTRUASI
   // ====================================================
 
   Future<void> loadData() async {
@@ -289,7 +223,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Gagal membaca riwayat: $error',
+            'Gagal membaca riwayat menstruasi: $error',
           ),
         ),
       );
@@ -297,187 +231,28 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // UNDUH HEALTH REPORT PDF
+  // SUMBER DATA MOOD
+  // ====================================================
+  //
+  // SELALU menggunakan hasil input Catat Mood.
+  // Tidak lagi mengambil demoMoods.
+  //
   // ====================================================
 
-  Future<void> downloadHealthReport() async {
-    if (generatingPdf) return;
-
-    setState(() {
-      generatingPdf = true;
-    });
-
-    try {
-      // Baca data repository terbaru.
-      final latestPeriods =
-          await repository.getPeriods();
-
-      if (!mounted) return;
-
-      savedPeriods = latestPeriods;
-
-      final periods = showDemoData
-          ? List<PeriodEntry>.from(demoPeriods)
-          : List<PeriodEntry>.from(latestPeriods);
-
-      final records = showDemoData
-          ? List<mood.MoodRecord>.from(demoMoods)
-          : mood.moodJournal.records;
-
-      if (periods.isEmpty && records.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Belum ada data untuk dibuat laporan.',
-            ),
-          ),
-        );
-        return;
-      }
-
-      await HealthReportService.downloadReport(
-        periods: periods,
-        moodRecords: records,
-        isDemoData: showDemoData,
-      );
-    } catch (error) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal membuat laporan PDF: $error',
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          generatingPdf = false;
-        });
-      }
-    }
-  }
-
-  // ====================================================
-  // CARD UMUM
-  // ====================================================
-
-  Widget card(Widget child) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: kBorder,
-        ),
-      ),
-      child: child,
+  List<mood.MoodRecord> getMoodRecords() {
+    final records = List<mood.MoodRecord>.from(
+      mood.moodJournal.records,
     );
-  }
 
-  Widget sectionTitle(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: kTextDark,
-        fontSize: 17,
-        fontWeight: FontWeight.bold,
-      ),
+    records.sort(
+      (a, b) => b.date.compareTo(a.date),
     );
+
+    return records;
   }
 
   // ====================================================
-  // RINGKASAN
-  // ====================================================
-
-  Widget summaryCard({
-    required String title,
-    required String value,
-    required IconData icon,
-  }) {
-    return Container(
-      constraints: const BoxConstraints(
-        minHeight: 118,
-      ),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBorder),
-      ),
-      child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
-        children: [
-          Icon(
-            icon,
-            color: kPinkDark,
-            size: 24,
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            title,
-            style: const TextStyle(
-              color: kTextSoft,
-              fontSize: 11,
-            ),
-          ),
-
-          const SizedBox(height: 5),
-
-          Text(
-            value,
-            style: const TextStyle(
-              color: kTextDark,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ====================================================
-  // LEGENDA GRAFIK
-  // ====================================================
-
-  Widget legend(
-    Color color,
-    String label,
-  ) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-
-        const SizedBox(width: 6),
-
-        Text(
-          label,
-          style: const TextStyle(
-            color: kTextSoft,
-            fontSize: 10,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ====================================================
-  // HITUNG FREKUENSI MOOD
+  // HITUNG STATISTIK MOOD
   // ====================================================
 
   Map<String, int> countMoods(
@@ -519,7 +294,180 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // GRAFIK BATANG MOOD
+  // DOWNLOAD HEALTH REPORT PDF
+  // ====================================================
+
+  Future<void> downloadHealthReport() async {
+    if (generatingPdf) return;
+
+    setState(() {
+      generatingPdf = true;
+    });
+
+    try {
+      final latestPeriods =
+          await repository.getPeriods();
+
+      if (!mounted) return;
+
+      final periods = showDemoData
+          ? List<PeriodEntry>.from(demoPeriods)
+          : List<PeriodEntry>.from(latestPeriods);
+
+      // PERBAIKAN:
+      // PDF selalu mengambil mood input pengguna.
+      final records = getMoodRecords();
+
+      if (periods.isEmpty && records.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Belum ada data untuk dibuat laporan.',
+            ),
+          ),
+        );
+
+        return;
+      }
+
+      await HealthReportService.downloadReport(
+        periods: periods,
+        moodRecords: records,
+
+        // Repository menstruasi saat ini masih
+        // menggunakan data simulasi lokal.
+        isDemoData: true,
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal membuat Health Report: $error',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          generatingPdf = false;
+        });
+      }
+    }
+  }
+
+  // ====================================================
+  // CARD UTAMA
+  // ====================================================
+
+  Widget card(Widget child) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: kBorder),
+      ),
+      child: child,
+    );
+  }
+
+  // ====================================================
+  // JUDUL SECTION
+  // ====================================================
+
+  Widget sectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        color: kTextDark,
+        fontSize: 17,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  // ====================================================
+  // CARD RINGKASAN
+  // ====================================================
+
+  Widget summaryCard({
+    required String title,
+    required String value,
+    required IconData icon,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(
+        minHeight: 118,
+      ),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: kBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            color: kPinkDark,
+            size: 24,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: kTextSoft,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            style: const TextStyle(
+              color: kTextDark,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ====================================================
+  // LEGENDA GRAFIK
+  // ====================================================
+
+  Widget legend(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            color: kTextSoft,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ====================================================
+  // GRAFIK DISTRIBUSI MOOD
   // ====================================================
 
   Widget moodBar(
@@ -531,13 +479,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
         maximum == 0 ? 0.0 : count / maximum;
 
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 14,
-      ),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           SizedBox(
-            width: 90,
+            width: 85,
             child: Text(
               name,
               style: const TextStyle(
@@ -546,36 +492,26 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             ),
           ),
-
           Expanded(
             child: ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(7),
               child: SizedBox(
                 height: 13,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Container(
-                      color: kPinkLight,
-                    ),
-
+                    Container(color: kPinkLight),
                     FractionallySizedBox(
-                      alignment:
-                          Alignment.centerLeft,
+                      alignment: Alignment.centerLeft,
                       widthFactor: fraction,
-                      child: Container(
-                        color: kPinkDark,
-                      ),
+                      child: Container(color: kPinkDark),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-
           const SizedBox(width: 10),
-
           SizedBox(
             width: 24,
             child: Text(
@@ -594,7 +530,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // HAPUS MOOD
+  // HAPUS RIWAYAT MOOD
   // ====================================================
 
   Future<void> deleteMood(
@@ -604,30 +540,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text(
-            'Hapus Catatan Mood?',
-          ),
+          title: const Text('Hapus Catatan Mood?'),
           content: Text(
-            'Hapus catatan pada '
+            'Hapus catatan tanggal '
             '${mood.formatMoodDate(record.date)}?',
           ),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  false,
-                );
+                Navigator.pop(dialogContext, false);
               },
               child: const Text('Batal'),
             ),
-
             FilledButton(
               onPressed: () {
-                Navigator.pop(
-                  dialogContext,
-                  true,
-                );
+                Navigator.pop(dialogContext, true);
               },
               child: const Text('Hapus'),
             ),
@@ -638,16 +565,26 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
     if (confirmed == true) {
       mood.moodJournal.delete(record.date);
+
+      if (mounted) {
+        setState(() {});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Catatan mood berhasil dihapus.',
+            ),
+          ),
+        );
+      }
     }
   }
 
   // ====================================================
-  // RIWAYAT MOOD
+  // ITEM RIWAYAT MOOD
   // ====================================================
 
-  Widget moodHistory(
-    mood.MoodRecord record,
-  ) {
+  Widget moodHistory(mood.MoodRecord record) {
     String emoji = '🙂';
 
     for (final option in mood.moodOptions) {
@@ -658,13 +595,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 10,
-      ),
+      padding: const EdgeInsets.only(bottom: 10),
       child: card(
         Row(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 44,
@@ -672,23 +606,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: kPinkLight,
-                borderRadius:
-                    BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 emoji,
-                style: const TextStyle(
-                  fontSize: 25,
-                ),
+                style: const TextStyle(fontSize: 25),
               ),
             ),
-
             const SizedBox(width: 12),
-
             Expanded(
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     record.mood,
@@ -698,9 +626,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 5),
-
                   Text(
                     mood.formatMoodDate(record.date),
                     style: const TextStyle(
@@ -708,10 +634,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       fontSize: 11,
                     ),
                   ),
-
                   if (record.note.isNotEmpty) ...[
                     const SizedBox(height: 7),
-
                     Text(
                       record.note,
                       style: const TextStyle(
@@ -723,18 +647,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 ],
               ),
             ),
-
-            if (!showDemoData)
-              IconButton(
-                tooltip: 'Hapus catatan',
-                onPressed: () {
-                  deleteMood(record);
-                },
-                icon: const Icon(
-                  Icons.delete_outline,
-                  color: kTextSoft,
-                ),
+            IconButton(
+              tooltip: 'Hapus mood',
+              onPressed: () {
+                deleteMood(record);
+              },
+              icon: const Icon(
+                Icons.delete_outline,
+                color: kTextSoft,
               ),
+            ),
           ],
         ),
       ),
@@ -742,7 +664,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // CARD DOWNLOAD PDF
+  // CARD UNDUH HEALTH REPORT
   // ====================================================
 
   Widget downloadCard() {
@@ -757,8 +679,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         ),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -767,8 +688,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 height: 46,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.picture_as_pdf_outlined,
@@ -776,9 +696,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   size: 26,
                 ),
               ),
-
               const SizedBox(width: 12),
-
               const Expanded(
                 child: Column(
                   crossAxisAlignment:
@@ -792,12 +710,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
                     SizedBox(height: 4),
-
                     Text(
-                      'Laporan kesehatan '
-                      'menstruasi dan mood',
+                      'Laporan menstruasi dan mood',
                       style: TextStyle(
                         color: kTextSoft,
                         fontSize: 11,
@@ -808,20 +723,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             ],
           ),
-
           const SizedBox(height: 15),
-
           const Text(
-            'Laporan mencakup:',
+            'Isi laporan:',
             style: TextStyle(
               color: kTextDark,
               fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const SizedBox(height: 8),
-
           const Text(
             '• Ringkasan siklus menstruasi\n'
             '• Grafik Cycle Trends\n'
@@ -833,9 +744,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               height: 1.7,
             ),
           ),
-
           const SizedBox(height: 17),
-
           SizedBox(
             width: double.infinity,
             height: 49,
@@ -864,18 +773,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 backgroundColor: kPinkDark,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(11),
                 ),
               ),
             ),
           ),
-
           const SizedBox(height: 10),
-
           const Text(
-            'PDF akan dibuka melalui dialog '
-            'simpan atau cetak pada perangkatmu.',
+            'Data siklus masih simulasi. '
+            'Mood diambil dari catatan pengguna.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: kTextSoft,
@@ -888,14 +794,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   // ====================================================
-  // BUILD
+  // BUILD HALAMAN
   // ====================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: kBackground,
-
       appBar: AppBar(
         backgroundColor: kBackground,
         surfaceTintColor: Colors.transparent,
@@ -908,7 +813,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
           ),
         ),
       ),
-
       body: loading
           ? const Center(
               child: CircularProgressIndicator(
@@ -916,24 +820,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
             )
           : AnimatedBuilder(
+              // INI MEMANTAU PERUBAHAN MOOD
               animation: mood.moodJournal,
               builder: (context, _) {
-                // =====================================
-                // SUMBER DATA MENSTRUASI
-                // =====================================
+                // =================================
+                // DATA MENSTRUASI
+                // =================================
 
                 final periods = showDemoData
-                    ? List<PeriodEntry>.from(
-                        demoPeriods,
-                      )
-                    : List<PeriodEntry>.from(
-                        savedPeriods,
-                      );
+                    ? List<PeriodEntry>.from(demoPeriods)
+                    : List<PeriodEntry>.from(savedPeriods);
 
                 periods.sort(
-                  (a, b) => a.startDate.compareTo(
-                    b.startDate,
-                  ),
+                  (a, b) =>
+                      a.startDate.compareTo(b.startDate),
                 );
 
                 final cycles = calculateCyclePoints(
@@ -947,30 +847,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     : periods.last;
 
                 final recentCycles = cycles.length > 6
-                    ? cycles.sublist(
-                        cycles.length - 6,
-                      )
+                    ? cycles.sublist(cycles.length - 6)
                     : cycles;
 
-                // =====================================
-                // SUMBER DATA MOOD
-                // =====================================
+                // =================================
+                // DATA MOOD INPUT PENGGUNA
+                // =================================
 
-                final records = showDemoData
-                    ? List<mood.MoodRecord>.from(
-                        demoMoods,
-                      )
-                    : mood.moodJournal.records;
+                final records = getMoodRecords();
 
-                records.sort(
-                  (a, b) => b.date.compareTo(
-                    a.date,
-                  ),
-                );
-
-                final counts = countMoods(
-                  records,
-                );
+                final counts = countMoods(records);
 
                 int maxMoodCount = 0;
 
@@ -992,9 +878,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       36,
                     ),
                     children: [
-                      // ================================
+                      // ==============================
                       // HEADER
-                      // ================================
+                      // ==============================
 
                       const Text(
                         'Pantau Perkembanganmu',
@@ -1008,8 +894,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       const SizedBox(height: 6),
 
                       const Text(
-                        'Lihat perkembangan siklus '
-                        'menstruasi dan suasana hati.',
+                        'Pantau siklus menstruasi '
+                        'dan suasana hatimu.',
                         style: TextStyle(
                           color: kTextSoft,
                           fontSize: 12,
@@ -1018,9 +904,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 20),
 
-                      // ================================
-                      // MODE DEMO
-                      // ================================
+                      // ==============================
+                      // MODE DEMO SIKLUS
+                      // ==============================
 
                       card(
                         Row(
@@ -1038,19 +924,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                     CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Tampilkan Data Contoh',
+                                    'Data Contoh Siklus',
                                     style: TextStyle(
                                       color: kTextDark,
                                       fontSize: 12,
-                                      fontWeight:
-                                          FontWeight.w600,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-
                                   SizedBox(height: 4),
-
                                   Text(
-                                    'Mode presentasi',
+                                    'Hanya untuk grafik menstruasi',
                                     style: TextStyle(
                                       color: kTextSoft,
                                       fontSize: 11,
@@ -1075,14 +958,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 10),
 
-                      Text(
-                        showDemoData
-                            ? 'Mode demo aktif. '
-                              'Data di bawah merupakan simulasi.'
-                            : 'Mode repository aktif. '
-                              'Saat ini repository masih '
-                              'menggunakan data dummy.',
-                        style: const TextStyle(
+                      const Text(
+                        'Catatan mood selalu menggunakan '
+                        'data yang kamu simpan melalui '
+                        'fitur Catat Mood.',
+                        style: TextStyle(
                           color: kTextSoft,
                           fontSize: 11,
                           height: 1.4,
@@ -1091,9 +971,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 27),
 
-                      // ================================
+                      // ==============================
                       // RINGKASAN MENSTRUASI
-                      // ================================
+                      // ==============================
 
                       sectionTitle(
                         'Ringkasan Menstruasi',
@@ -1121,8 +1001,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               value: latest?.duration == null
                                   ? '-'
                                   : '${latest!.duration} hari',
-                              icon:
-                                  Icons.water_drop_outlined,
+                              icon: Icons.water_drop_outlined,
                             ),
                           ),
                         ],
@@ -1130,9 +1009,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 27),
 
-                      // ================================
+                      // ==============================
                       // CYCLE TRENDS
-                      // ================================
+                      // ==============================
 
                       Row(
                         children: [
@@ -1141,7 +1020,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               'Cycle Trends',
                             ),
                           ),
-
                           const Icon(
                             Icons.insights_outlined,
                             color: kPinkDark,
@@ -1181,39 +1059,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               const SizedBox(
                                 height: 210,
                                 child: Center(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.show_chart,
-                                        color: kPinkDark,
-                                        size: 36,
-                                      ),
-
-                                      SizedBox(height: 10),
-
-                                      Text(
-                                        'Belum Cukup Data',
-                                        style: TextStyle(
-                                          color: kTextDark,
-                                          fontWeight:
-                                              FontWeight.bold,
-                                        ),
-                                      ),
-
-                                      SizedBox(height: 8),
-
-                                      Text(
-                                        'Dibutuhkan minimal '
-                                        'dua tanggal mulai menstruasi.',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: kTextSoft,
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                    ],
+                                  child: Text(
+                                    'Belum cukup data siklus.',
+                                    style: TextStyle(
+                                      color: kTextSoft,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               )
@@ -1238,7 +1089,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                     kLine,
                                     'Dalam rentang',
                                   ),
-
                                   legend(
                                     kOrange,
                                     'Di luar acuan',
@@ -1249,17 +1099,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                             const SizedBox(height: 17),
 
-                            const Divider(
-                              color: kBorder,
-                            ),
+                            const Divider(color: kBorder),
 
                             const SizedBox(height: 12),
 
                             const Text(
-                              'Panjang siklus dihitung '
-                              'dari tanggal mulai menstruasi '
-                              'ke tanggal mulai menstruasi '
-                              'berikutnya.',
+                              'Grafik menunjukkan panjang '
+                              'siklus berdasarkan jarak '
+                              'antara dua tanggal mulai '
+                              'menstruasi.',
                               style: TextStyle(
                                 color: kTextDark,
                                 fontSize: 12,
@@ -1271,8 +1119,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                             const Text(
                               'Area abu-abu menunjukkan '
-                              'rentang acuan umum '
-                              '21-35 hari untuk orang dewasa. '
+                              'rentang acuan umum 21–35 hari '
+                              'untuk orang dewasa. '
                               'Penanda oranye bukan diagnosis.',
                               style: TextStyle(
                                 color: kTextSoft,
@@ -1286,9 +1134,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 27),
 
-                      // ================================
+                      // ==============================
                       // RIWAYAT SIKLUS
-                      // ================================
+                      // ==============================
 
                       sectionTitle('Riwayat Siklus'),
 
@@ -1297,8 +1145,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       if (cycles.isEmpty)
                         card(
                           const Text(
-                            'Belum ada panjang siklus '
-                            'yang bisa dihitung.',
+                            'Belum ada riwayat siklus.',
                             style: TextStyle(
                               color: kTextSoft,
                               fontSize: 12,
@@ -1309,8 +1156,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         ...cycles.reversed.take(6).map(
                           (cycle) {
                             return Padding(
-                              padding:
-                                  const EdgeInsets.only(
+                              padding: const EdgeInsets.only(
                                 bottom: 10,
                               ),
                               child: card(
@@ -1319,29 +1165,23 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                     Container(
                                       width: 44,
                                       height: 44,
-                                      alignment:
-                                          Alignment.center,
+                                      alignment: Alignment.center,
                                       decoration: BoxDecoration(
-                                        color:
-                                            cycle.outsideReference
-                                                ? const Color(
-                                                    0xFFFFF3D9,
-                                                  )
-                                                : kPinkLight,
+                                        color: cycle.outsideReference
+                                            ? const Color(
+                                                0xFFFFF3D9,
+                                              )
+                                            : kPinkLight,
                                         borderRadius:
-                                            BorderRadius.circular(
-                                          11,
-                                        ),
+                                            BorderRadius.circular(11),
                                       ),
                                       child: Icon(
-                                        Icons
-                                            .calendar_month_outlined,
-                                        color:
-                                            cycle.outsideReference
-                                                ? const Color(
-                                                    0xFFE19C19,
-                                                  )
-                                                : kPinkDark,
+                                        Icons.calendar_month_outlined,
+                                        color: cycle.outsideReference
+                                            ? const Color(
+                                                0xFFE19C19,
+                                              )
+                                            : kPinkDark,
                                       ),
                                     ),
 
@@ -1354,25 +1194,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                         children: [
                                           Text(
                                             '${cycle.length} hari',
-                                            style:
-                                                const TextStyle(
+                                            style: const TextStyle(
                                               color: kTextDark,
                                               fontSize: 14,
                                               fontWeight:
                                                   FontWeight.bold,
                                             ),
                                           ),
-
-                                          const SizedBox(
-                                            height: 5,
-                                          ),
-
+                                          const SizedBox(height: 5),
                                           Text(
-                                            statsDate(
-                                              cycle.startDate,
-                                            ),
-                                            style:
-                                                const TextStyle(
+                                            statsDate(cycle.startDate),
+                                            style: const TextStyle(
                                               color: kTextSoft,
                                               fontSize: 11,
                                             ),
@@ -1396,18 +1228,26 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 27),
 
-                      // ================================
-                      // STATISTIK MOOD
-                      // ================================
+                      // ==============================
+                      // STATISTIK MOOD REAL-TIME
+                      // ==============================
 
-                      const Divider(
-                        color: kBorder,
-                      ),
+                      const Divider(color: kBorder),
 
                       const SizedBox(height: 20),
 
-                      sectionTitle(
-                        'Statistik Mood',
+                      Row(
+                        children: [
+                          Expanded(
+                            child: sectionTitle(
+                              'Statistik Mood',
+                            ),
+                          ),
+                          const Icon(
+                            Icons.mood_outlined,
+                            color: kPinkDark,
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 13),
@@ -1417,10 +1257,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           Expanded(
                             child: summaryCard(
                               title: 'Total Catatan',
-                              value:
-                                  '${records.length} hari',
-                              icon:
-                                  Icons.edit_calendar_outlined,
+                              value: '${records.length} hari',
+                              icon: Icons.edit_calendar_outlined,
                             ),
                           ),
 
@@ -1429,9 +1267,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           Expanded(
                             child: summaryCard(
                               title: 'Mood Terbanyak',
-                              value: topMood(
-                                counts,
-                              ),
+                              value: topMood(counts),
                               icon: Icons.mood_outlined,
                             ),
                           ),
@@ -1440,9 +1276,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 27),
 
-                      sectionTitle(
-                        'Distribusi Mood',
-                      ),
+                      // ==============================
+                      // DISTRIBUSI MOOD
+                      // ==============================
+
+                      sectionTitle('Distribusi Mood'),
 
                       const SizedBox(height: 12),
 
@@ -1453,12 +1291,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           children: [
                             if (records.isEmpty)
                               const Padding(
-                                padding:
-                                    EdgeInsets.only(
+                                padding: EdgeInsets.only(
                                   bottom: 15,
                                 ),
                                 child: Text(
-                                  'Belum ada catatan mood.',
+                                  'Belum ada catatan mood. '
+                                  'Silakan catat mood terlebih dahulu.',
                                   style: TextStyle(
                                     color: kTextSoft,
                                     fontSize: 12,
@@ -1479,6 +1317,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       const SizedBox(height: 26),
 
+                      // ==============================
+                      // RIWAYAT MOOD
+                      // ==============================
+
                       Row(
                         children: [
                           Expanded(
@@ -1486,7 +1328,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               'Riwayat Mood',
                             ),
                           ),
-
                           Text(
                             '${records.length} catatan',
                             style: const TextStyle(
@@ -1501,34 +1342,54 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                       if (records.isEmpty)
                         card(
-                          const Text(
-                            'Belum ada riwayat mood.',
-                            style: TextStyle(
-                              color: kTextSoft,
-                              fontSize: 12,
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                vertical: 18,
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.mood_outlined,
+                                    color: kPink,
+                                    size: 36,
+                                  ),
+                                  SizedBox(height: 10),
+                                  Text(
+                                    'Belum Ada Riwayat Mood',
+                                    style: TextStyle(
+                                      color: kTextDark,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 6),
+                                  Text(
+                                    'Mood yang disimpan akan '
+                                    'muncul di sini.',
+                                    style: TextStyle(
+                                      color: kTextSoft,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         )
                       else
-                        ...records.take(8).map(
-                          moodHistory,
-                        ),
+                        ...records.take(8).map(moodHistory),
 
                       const SizedBox(height: 30),
 
-                      // ================================
-                      // FITUR PREMIUM GRATIS
-                      // ================================
+                      // ==============================
+                      // HEALTH REPORT
+                      // ==============================
 
-                      const Divider(
-                        color: kBorder,
-                      ),
+                      const Divider(color: kBorder),
 
                       const SizedBox(height: 20),
 
-                      sectionTitle(
-                        'Laporan Kesehatan',
-                      ),
+                      sectionTitle('Laporan Kesehatan'),
 
                       const SizedBox(height: 13),
 
@@ -1537,12 +1398,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       const SizedBox(height: 20),
 
                       const Text(
-                        'Fitur Health Report tersedia '
-                        'gratis di LunaCare. '
-                        'Pada versi demo ini, data '
-                        'menstruasi belum disimpan '
-                        'permanen dan data mood '
-                        'masih tersimpan sementara.',
+                        'Catatan mood masih disimpan '
+                        'sementara di memori aplikasi. '
+                        'Data akan hilang jika aplikasi '
+                        'dijalankan ulang. '
+                        'Penyimpanan permanen akan '
+                        'diintegrasikan kemudian.',
                         style: TextStyle(
                           color: kTextSoft,
                           fontSize: 11,
@@ -1559,7 +1420,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 }
 
 // ======================================================
-// CUSTOM PAINTER CYCLE TRENDS
+// CUSTOM PAINTER - CYCLE TRENDS
 // ======================================================
 
 class CycleTrendPainter extends CustomPainter {
@@ -1578,11 +1439,8 @@ class CycleTrendPainter extends CustomPainter {
     const double top = 34;
     const double bottom = 45;
 
-    final plotWidth =
-        size.width - left - right;
-
-    final plotHeight =
-        size.height - top - bottom;
+    final plotWidth = size.width - left - right;
+    final plotHeight = size.height - top - bottom;
 
     if (plotWidth <= 0 || plotHeight <= 0) {
       return;
@@ -1604,9 +1462,7 @@ class CycleTrendPainter extends CustomPainter {
 
     double getY(double days) {
       return top +
-          (yMax - days) /
-              (yMax - yMin) *
-              plotHeight;
+          (yMax - days) / (yMax - yMin) * plotHeight;
     }
 
     double getX(int index) {
@@ -1615,14 +1471,10 @@ class CycleTrendPainter extends CustomPainter {
       }
 
       return left +
-          index * plotWidth /
-              (cycles.length - 1);
+          index * plotWidth / (cycles.length - 1);
     }
 
-    // ==================================================
-    // AREA ACUAN
-    // ==================================================
-
+    // AREA RENTANG ACUAN
     canvas.drawRect(
       Rect.fromLTRB(
         left,
@@ -1631,19 +1483,12 @@ class CycleTrendPainter extends CustomPainter {
         getY(minCycle.toDouble()),
       ),
       Paint()
-        ..color = const Color(
-          0xFFF0F1F3,
-        ),
+        ..color = const Color(0xFFF0F1F3),
     );
 
-    // ==================================================
     // GRID HORIZONTAL
-    // ==================================================
-
     for (int day = 15; day <= 60; day += 5) {
-      if (day < yMin || day > yMax) {
-        continue;
-      }
+      if (day < yMin || day > yMax) continue;
 
       final y = getY(day.toDouble());
 
@@ -1651,9 +1496,7 @@ class CycleTrendPainter extends CustomPainter {
         Offset(left, y),
         Offset(size.width - right, y),
         Paint()
-          ..color = const Color(
-            0xFFE5E5E8,
-          )
+          ..color = const Color(0xFFE5E5E8)
           ..strokeWidth = 1,
       );
 
@@ -1666,42 +1509,30 @@ class CycleTrendPainter extends CustomPainter {
       );
     }
 
+    // POSISI TITIK
     final points = <Offset>[];
 
     for (int i = 0; i < cycles.length; i++) {
       points.add(
         Offset(
           getX(i),
-          getY(
-            cycles[i].length.toDouble(),
-          ),
+          getY(cycles[i].length.toDouble()),
         ),
       );
     }
 
-    // ==================================================
     // GRID VERTIKAL
-    // ==================================================
-
     for (final point in points) {
       canvas.drawLine(
         Offset(point.dx, top),
-        Offset(
-          point.dx,
-          size.height - bottom,
-        ),
+        Offset(point.dx, size.height - bottom),
         Paint()
-          ..color = const Color(
-            0xFFEEEEF0,
-          )
+          ..color = const Color(0xFFEEEEF0)
           ..strokeWidth = 1,
       );
     }
 
-    // ==================================================
     // GARIS MELENGKUNG
-    // ==================================================
-
     if (points.length > 1) {
       final path = Path()
         ..moveTo(
@@ -1709,9 +1540,7 @@ class CycleTrendPainter extends CustomPainter {
           points.first.dy,
         );
 
-      for (int i = 1;
-          i < points.length;
-          i++) {
+      for (int i = 1; i < points.length; i++) {
         final previous = points[i - 1];
         final current = points[i];
 
@@ -1731,9 +1560,7 @@ class CycleTrendPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = const Color(
-            0xFFAEB3BE,
-          )
+          ..color = const Color(0xFFAEB3BE)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3.5
           ..strokeCap = StrokeCap.round
@@ -1741,60 +1568,45 @@ class CycleTrendPainter extends CustomPainter {
       );
     }
 
-    // ==================================================
-    // TITIK GRAFIK
-    // ==================================================
-
-    for (int i = 0;
-        i < points.length;
-        i++) {
+    // TITIK DAN LABEL
+    for (int i = 0; i < points.length; i++) {
       final point = points[i];
       final cycle = cycles[i];
 
-      final outside =
-          cycle.outsideReference;
+      final outside = cycle.outsideReference;
 
       if (outside) {
         canvas.drawCircle(
           point,
           20,
           Paint()
-            ..color = kOrange.withValues(
-              alpha: 0.18,
-            ),
+            ..color = kOrange.withValues(alpha: 0.18),
         );
 
         canvas.drawCircle(
           point,
           12,
           Paint()
-            ..color = kOrange.withValues(
-              alpha: 0.27,
-            ),
+            ..color = kOrange.withValues(alpha: 0.27),
         );
       }
 
       canvas.drawCircle(
         point,
         8,
-        Paint()
-          ..color = Colors.white,
+        Paint()..color = Colors.white,
       );
 
       canvas.drawCircle(
         point,
         5.4,
         Paint()
-          ..color = outside
-              ? kOrange
-              : kLine,
+          ..color = outside ? kOrange : kLine,
       );
 
-      // NILAI PANJANG SIKLUS
-      final labelY =
-          point.dy < top + 18
-              ? point.dy + 12
-              : point.dy - 29;
+      final labelY = point.dy < top + 18
+          ? point.dy + 12
+          : point.dy - 29;
 
       paintCenteredText(
         canvas,
@@ -1807,11 +1619,9 @@ class CycleTrendPainter extends CustomPainter {
         bold: true,
       );
 
-      // TANGGAL SUMBU X
       paintCenteredText(
         canvas,
-        '${cycle.startDate.day}/'
-        '${cycle.startDate.month}',
+        '${cycle.startDate.day}/${cycle.startDate.month}',
         Offset(
           point.dx,
           size.height - bottom + 17,
@@ -1823,7 +1633,7 @@ class CycleTrendPainter extends CustomPainter {
   }
 
   // ====================================================
-  // HELPER TEKS
+  // DRAW TEXT
   // ====================================================
 
   void paintText(
@@ -1847,6 +1657,10 @@ class CycleTrendPainter extends CustomPainter {
     painter.layout();
     painter.paint(canvas, offset);
   }
+
+  // ====================================================
+  // DRAW CENTERED TEXT
+  // ====================================================
 
   void paintCenteredText(
     Canvas canvas,
